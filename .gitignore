@@ -9,3 +9,7 @@ venv/
 
 # Vosk konusma modeli (buyuk, ayrica indirilir)
 models/
+
+# Calisma zamani verileri (kisisel hatirlaticilar, yedekler)
+data/
+*.zip

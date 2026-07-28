@@ -230,6 +230,32 @@ def _pencere(t: str):
     return None
 
 
+def _ag_durumu(t: str):
+    """'hangi wifi', 'hangi aga bagliyim', 'internet baglantim nasil' gibi sorular."""
+    wifi_sorusu = ("wifi" in t or "wi fi" in t or "kablosuz" in t
+                   or ("hangi" in t and ("ag" in t or "internet" in t)))
+    baglanti_sorusu = ("internet" in t and any(k in t for k in
+                       ("nasil", "var mi", "calisiyor", "durumu", "hizi")))
+    if not (wifi_sorusu or baglanti_sorusu):
+        return None
+
+    try:
+        from jarvis import telemetry
+    except ImportError:
+        import telemetry
+
+    w = telemetry.wifi_bilgisi()
+    if not w.get("ssid"):
+        return "Kablosuz bir aga bagli degilsiniz efendim, baglanti kablolu gorunuyor."
+
+    cevap = f"{w['ssid']} adli kablosuz aga baglisiniz efendim"
+    if w.get("signal"):
+        cevap += f", sinyal gucu {w['signal'].rstrip('%')} yuzde"
+    if w.get("band"):
+        cevap += f", {w['band']} bandinda"
+    return cevap + "."
+
+
 def _sistem(t: str):
     if "bilgisayari kilitle" in t or "ekrani kilitle" in t:
         subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", shell=True, creationflags=_GIZLI)
@@ -238,8 +264,8 @@ def _sistem(t: str):
 
 
 # Sirayla denenecek isleyiciler
-_ISLEYICILER = (_saat_tarih, _uygulama_ac, _uygulama_kapat, _internette_ara,
-                _dosya_bul, _ses_medya, _pencere, _sistem)
+_ISLEYICILER = (_saat_tarih, _ag_durumu, _uygulama_ac, _uygulama_kapat,
+                _internette_ara, _dosya_bul, _ses_medya, _pencere, _sistem)
 
 
 def calistir(metin: str):

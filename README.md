@@ -31,19 +31,20 @@ Kişisel sesli asistan. Genel tanıtım için [`tanitim.md`](./tanitim.md) dosya
 ## Çalıştırma
 
 ### 🎛️ Panel modu (önerilen — hiç pencere açmaz)
-`scripts/jarvis_baslat.vbs` dosyasına **çift tıklayın**. Hiçbir terminal/konsol
-penceresi açılmaz; arka planda sessizce sunucu başlar ve **kontrol paneli
-tarayıcıda açılır** (http://localhost:5000).
+`scripts/jarvis_baslat.vbs` dosyasına **çift tıklayın** (hiç pencere açmaz) ya da
+`scripts/jarvis_baslat.bat` kullanın. Sunucu arka planda başlar ve **kontrol
+paneli tarayıcıda açılır** (http://localhost:5000).
 
-> İpucu: `jarvis_baslat.vbs` dosyasına sağ tık → "Kısayol oluştur" → kısayolu
-> masaüstüne taşıyın. Böylece tek tıkla JARVIS'i başlatırsınız.
->
-> (`jarvis_baslat.bat` de aynı işi yapar ama başlarken kısa bir pencere görünür.)
+Bu betik sanal ortamı, model önbelleğini ve geçici dosyaları **D: sürücüsünde**
+tutar (`D:\jarvis-env`, `D:\jarvis-cache`); C: sürücüsüne hiçbir şey yazılmaz.
+
+> İpucu: dosyaya sağ tık → "Kısayol oluştur" → kısayolu masaüstüne taşıyın.
 
 - **Konuşmak için:** Panel açıkken **mikrofon butonuna basılı tutun** (veya
   **BOŞLUK tuşuna** basılı tutun), konuşun, bırakın.
 - JARVIS panelde yazıyla gösterir **ve sesli cevap verir**.
-- Hatırlatıcı/ajanda panelde canlı görünür (`panel/jarvis_data.js`).
+- Hatırlatıcı/ajanda panelde canlı görünür; kayıtlar `data/ajanda.json`
+  dosyasında tutulur (panelden veya sesle düzenlenir).
 
 ### 💻 Terminal modu (alternatif)
 ```bash
@@ -68,15 +69,37 @@ otomatik olarak beyne (Claude) sorulur ve akıllıca cevaplanır.
 | "duraklat", "oynat", "sonraki şarkı" | Medya kontrolü |
 | "pencereleri küçült", "masaüstünü göster", "tam ekran" | Pencere yönetimi |
 | "bilgisayarı kilitle" | Ekranı kilitler |
+| "15:30'da toplantı hatırlat", "20 dakika sonra çayı al hatırlat" | Ajandaya kayıt ekler, zamanı gelince sesli hatırlatır |
 | Bunların dışında her soru | JARVIS (Claude beyni) cevaplar |
 
 Yeni komut eklemek/değiştirmek için: `jarvis/commands.py`.
 
 ## 🎛️ Kontrol Paneli
 
-`panel/index.html` dosyasına çift tıklayın — sinematik JARVIS arayüzü açılır
-(canlı saat, ajanda/hatırlatıcılar, telemetri, mikrofon dalga formu).
-Hatırlatıcıları düzenlemek için: `panel/jarvis_data.js`.
+Panel, sunucu çalışırken http://localhost:5000 adresinde açılır. Gösterdiği
+**tüm veriler gerçektir** — hiçbir kart simülasyon değildir:
+
+| Kart | Kaynak |
+|------|--------|
+| Sistem yaşam belirtileri | `psutil` (CPU, bellek, disk, batarya) + Windows GPU performans sayacı |
+| Ağ trafiği | `psutil` bayt sayaçları; PING gerçek ICMP/TCP ölçümü |
+| Hava durumu | IP'den konum + [Open-Meteo](https://open-meteo.com) (anahtar gerekmez) |
+| Bağlantı durumları | Gerçek kontroller: internet, ağ geçidi, mikrofon, STT modeli, Claude CLI |
+| Bugünün ajandası | `data/ajanda.json` — panelden veya sesle eklenir, zamanı gelince sesli çalar |
+| Dikkat gerektiren | Gerçek disk/bellek/batarya/ağ durumundan üretilir |
+| Sistem kaydı | Yalnızca gerçekleşen olaylar (yedekleme, hatırlatıcı, STT, komutlar) |
+
+Hızlı komut butonları da gerçek işlem yapar:
+
+| Buton | Yaptığı |
+|-------|---------|
+| ODAK MODU | Windows bildirim balonlarını gerçekten kapatır/açar (kayıt defteri) |
+| BRİFİNG / BRIEF ME | Saat, hava, ajanda ve sistem durumundan gerçek özet üretip seslendirir |
+| YEDEKLE | Projeyi ve verileri `D:\jarvis-backups` altına zip'ler |
+| KİLİTLE | Windows oturumunu kilitler |
+
+İlgili modüller: `jarvis/telemetry.py`, `jarvis/weather.py`, `jarvis/ajanda.py`,
+`jarvis/eylemler.py`.
 
 ## Bileşenleri tek tek test etme
 

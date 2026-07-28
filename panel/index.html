@@ -20,6 +20,11 @@
   .mic-btn:hover { background:rgba(95,224,255,.2)!important; box-shadow:0 0 22px rgba(95,224,255,.35); }
   .brief-btn:hover { border-color:#7ff0ff!important; background:linear-gradient(180deg, rgba(95,224,255,.3), rgba(95,224,255,.1))!important; box-shadow:0 0 30px rgba(95,224,255,.35); }
   .quick:hover { border-color:#5fe0ff!important; background:rgba(95,224,255,.12)!important; }
+  .agin { font-family:'JetBrains Mono',monospace; background:rgba(6,22,38,.7); color:#d6f1ff;
+          border:1px solid rgba(95,224,255,.2); outline:none; }
+  .agin:focus { border-color:#5fe0ff; }
+  .agin::placeholder { color:rgba(160,215,240,.35); }
+  #agTime::-webkit-calendar-picker-indicator { filter:invert(.8) sepia(1) saturate(4) hue-rotate(160deg); cursor:pointer; }
 </style>
 </head>
 <body>
@@ -44,11 +49,11 @@
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
       <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(95,224,255,.25); background:rgba(10,32,52,.5);">
-        <div style="width:7px; height:7px; border-radius:50%; background:#6effc0; box-shadow:0 0 10px 2px rgba(110,255,192,.6); animation:jblink 2.4s steps(1,end) infinite;"></div>
-        <span class="mono" style="font-size:10px; letter-spacing:.2em; color:#9fe8d0;">TÜM SİSTEMLER AKTİF</span>
+        <div id="statusDot" style="width:7px; height:7px; border-radius:50%; background:#5fe0ff; box-shadow:0 0 10px 2px rgba(95,224,255,.6); animation:jblink 2.4s steps(1,end) infinite;"></div>
+        <span class="mono" id="statusText" style="font-size:10px; letter-spacing:.2em; color:#9fe8d0;">BAĞLANIYOR…</span>
       </div>
-      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(255,179,92,.28); background:rgba(40,26,10,.4);">
-        <span class="mono" style="font-size:10px; letter-spacing:.2em; color:#ffc689;">GÜVENLİ HAT · AES-512</span>
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(95,224,255,.22); background:rgba(10,32,52,.4);">
+        <span class="mono" style="font-size:10px; letter-spacing:.2em; color:#8fd8f5;">YEREL · <span id="hostName">—</span></span>
       </div>
       <div style="text-align:right; min-width:150px;">
         <div class="mono" id="clock" style="font-size:28px; font-weight:400; color:#eaf9ff; letter-spacing:.06em; line-height:1;">--:--:--</div>
@@ -74,10 +79,11 @@
         <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:12px;">AĞ TRAFİĞİ</div>
         <div id="netBars" style="display:flex; align-items:flex-end; gap:3px; height:76px;"></div>
         <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:10px; color:rgba(160,215,240,.6);" class="mono">
-          <span>↓ <span id="down">4.2</span> MB/s</span>
-          <span>↑ <span id="up">1.1</span> MB/s</span>
-          <span>PING <span id="ping">12</span>ms</span>
+          <span>↓ <span id="down">—</span></span>
+          <span>↑ <span id="up">—</span></span>
+          <span>PING <span id="ping">--</span>ms</span>
         </div>
+        <div class="mono" id="netDetail" style="margin-top:7px; padding-top:7px; border-top:1px solid rgba(95,224,255,.12); font-size:10px; letter-spacing:.06em; color:rgba(160,215,240,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
       </section>
 
       <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
@@ -150,6 +156,14 @@
 
         <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:14px;">BUGÜNÜN AJANDASI</div>
         <div id="agenda" style="display:flex; flex-direction:column; gap:12px;"></div>
+        <div style="display:flex; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid rgba(95,224,255,.14);">
+          <input id="agTime" type="time" value="09:00" class="mono agin"
+                 style="width:88px; padding:6px 8px; font-size:11px;">
+          <input id="agTitle" type="text" placeholder="Yeni hatırlatıcı" class="agin"
+                 style="flex:1; min-width:0; padding:6px 8px; font-size:12px;">
+          <div id="agAdd" class="quick hoverbtn mono"
+               style="padding:6px 12px; border:1px solid rgba(95,224,255,.3); background:rgba(95,224,255,.1); color:#a8e2fa; font-size:14px; cursor:pointer; line-height:1.3;">+</div>
+        </div>
       </section>
 
       <section style="padding:16px; border:1px solid rgba(255,179,92,.24); background:linear-gradient(180deg, rgba(44,30,12,.5), rgba(20,14,6,.4));">
@@ -166,8 +180,7 @@
   </footer>
 </div>
 
-<!-- Günlük veriler (hatırlatıcı/ajanda vb.) -->
-<script src="jarvis_data.js"></script>
+<!-- Tüm veriler sunucudaki gerçek ölçümlerden gelir (/api/*) -->
 <script>
 (function () {
   "use strict";
@@ -175,13 +188,13 @@
   var two = function (n) { return String(n).padStart(2, "0"); };
 
   // ---- durum ----
+  // Telemetri, hava, ajanda ve uyarilar sunucudaki gercek olcumlerden gelir;
+  // burada yalnizca en son alinan degerler tutulur.
   var state = {
-    cpu: 34, ram: 61, gpu: 22, temp: 48,
-    net: Array.from({ length: 28 }, function (_, i) { return 20 + Math.round(40 * Math.abs(Math.sin(i / 3))); }),
-    wave: Array.from({ length: 40 }, function () { return 8; }),
-    listening: false, level: 0.05, briefed: false,
-    down: "4.2", up: "1.1", ping: 12,
-    logs: []
+    vitals: [], net: [], wave: Array.from({ length: 40 }, function () { return 8; }),
+    listening: false, level: 0.05,
+    down: "0.0", up: "0.0", ping: null,
+    logs: [], sonOlayId: 0, agenda: [], focus: false
   };
   var analyser = null, stream = null, actx = null, freq = null, raf = null;
 
@@ -216,7 +229,7 @@
       { weekday: "long", day: "numeric", month: "long", year: "numeric" }).toUpperCase();
   }
 
-  // ---- statik listeleri (jarvis_data.js) render et ----
+  // ---- kart çizicileri (veriler /api/* uçlarından gelir) ----
   function el(tag, css, html) {
     var e = document.createElement(tag);
     if (css) e.setAttribute("style", css);
@@ -224,99 +237,147 @@
     return e;
   }
 
-  function renderData() {
-    var D = window.JARVIS_DATA || {};
-    if (D.version) $("version").textContent = D.version;
+  // ---- hava durumu (gerçek: konum + Open-Meteo) ----
+  function renderWeather(w) {
+    if (!w) return;
+    $("weatherCity").textContent = w.city || "—";
+    $("weatherTemp").textContent = w.temp || "--°";
+    $("weatherDesc").textContent = w.desc || "";
+    $("weatherMeta1").textContent = w.meta1 || "";
+    $("weatherMeta2").textContent = (w.meta2 || "") + (w.stale ? " · ESKİ VERİ" : "");
+  }
 
-    // hava
-    if (D.weather) {
-      var w = D.weather;
-      if (w.city)  $("weatherCity").textContent = w.city;
-      if (w.temp)  $("weatherTemp").textContent = w.temp;
-      if (w.desc)  $("weatherDesc").textContent = w.desc;
-      if (w.meta1) $("weatherMeta1").textContent = w.meta1;
-      if (w.meta2) $("weatherMeta2").textContent = w.meta2;
-    }
-
-    // bağlantılar
-    if (D.linkSummary) $("linkSummary").textContent = D.linkSummary;
-    var linksBox = $("links"); linksBox.innerHTML = "";
-    (D.links || []).forEach(function (k) {
+  // ---- bağlantı durumları (gerçek: ping, mikrofon, STT, Claude) ----
+  function renderLinks(links, summary) {
+    $("linkSummary").textContent = summary || "";
+    var box = $("links"); box.innerHTML = "";
+    (links || []).forEach(function (k) {
       var row = el("div", "display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid rgba(95,224,255,.12); background:rgba(6,22,38,.45);");
       row.appendChild(el("div", "width:6px; height:6px; border-radius:50%; background:" + k.dot + "; box-shadow:0 0 8px 2px " + k.glow + "; flex-shrink:0;"));
       row.appendChild(el("span", "flex:1; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; color:rgba(200,235,250,.85);", k.name));
       row.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; color:" + k.dot + ";", k.status));
-      linksBox.appendChild(row);
+      box.appendChild(row);
     });
+  }
 
-    // ajanda / hatırlatıcılar
+  // ---- ajanda (gerçek: data/ajanda.json, panelden ve sesle düzenlenir) ----
+  function renderAgenda(items) {
+    state.agenda = items || [];
     var ag = $("agenda"); ag.innerHTML = "";
-    (D.agenda || []).forEach(function (a) {
-      var row = el("div", "display:flex; gap:12px; align-items:flex-start;");
+    var simdi = two(new Date().getHours()) + ":" + two(new Date().getMinutes());
+
+    if (!state.agenda.length) {
+      ag.appendChild(el("div", "font-size:13px; color:rgba(160,215,240,.5); letter-spacing:.03em;",
+        "Bugün için kayıt yok. Aşağıdan ekleyin ya da \"15:00'te toplantı hatırlat\" deyin."));
+    }
+
+    state.agenda.forEach(function (a) {
+      var gecti = a.done || a.time < simdi;
+      var row = el("div", "display:flex; gap:12px; align-items:flex-start; opacity:" + (gecti ? ".45" : "1") + ";");
       row.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:11px; color:#5fe0ff; padding-top:2px; min-width:44px;", a.time));
       var col = el("div", "flex:1; display:flex; flex-direction:column; gap:2px; padding-left:12px; border-left:1px solid rgba(95,224,255,.2);");
-      col.appendChild(el("span", "font-size:14px; color:#d6f1ff; letter-spacing:.03em;", a.title));
+      col.appendChild(el("span", "font-size:14px; color:#d6f1ff; letter-spacing:.03em;" + (gecti ? "text-decoration:line-through;" : ""), a.title));
       col.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:rgba(160,215,240,.5);", a.meta || ""));
       row.appendChild(col);
+      var sil = el("span", "cursor:pointer; color:rgba(255,140,140,.6); font-size:14px; padding:0 4px; line-height:1;", "×");
+      sil.title = "Sil";
+      sil.addEventListener("click", function () { ajandaSil(a.id); });
+      row.appendChild(sil);
       ag.appendChild(row);
     });
+  }
 
-    // uyarılar
+  function ajandaSil(id) {
+    fetch("/api/agenda/" + id, { method: "DELETE" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { renderAgenda(d.items); });
+  }
+
+  function ajandaEkle() {
+    var saat = $("agTime").value.trim(), baslik = $("agTitle").value.trim();
+    if (!saat || !baslik) { $("agTitle").focus(); return; }
+    fetch("/api/agenda", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ time: saat, title: baslik, meta: "PANEL" })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) { $("agTitle").value = ""; renderAgenda(d.items); }
+      });
+  }
+
+  // ---- uyarılar (gerçek: disk, bellek, batarya, ağ, yaklaşan ajanda) ----
+  var UYARI_RENK = {
+    kritik: "#ff9b9b", uyari: "#ffddb5", ajanda: "#a8e2fa", ok: "rgba(160,215,240,.6)"
+  };
+  function renderAlerts(alerts) {
     var al = $("alerts"); al.innerHTML = "";
-    (D.alerts || []).forEach(function (item) {
+    (alerts || []).forEach(function (item) {
+      var renk = UYARI_RENK[item.level] || "#ffddb5";
       var row = el("div", "display:flex; gap:10px; align-items:baseline;");
-      row.appendChild(el("span", "color:#ffb35c; font-family:'JetBrains Mono',monospace; font-size:11px;", "!"));
-      row.appendChild(el("span", "font-size:14px; color:#ffddb5; letter-spacing:.03em; line-height:1.35;", item.text));
+      row.appendChild(el("span", "color:" + (item.level === "ok" ? "#6effc0" : "#ffb35c") + "; font-family:'JetBrains Mono',monospace; font-size:11px;",
+        item.level === "ok" ? "✓" : "!"));
+      row.appendChild(el("span", "font-size:14px; color:" + renk + "; letter-spacing:.03em; line-height:1.35;", item.text));
       al.appendChild(row);
     });
+  }
 
-    // loglar (yalnızca ilk yüklemede tohumla)
-    if (state.logs.length === 0 && D.logs) {
-      state.logs = D.logs.slice(-3);
-      renderLogs();
+  // ---- yaşam belirtileri (gerçek: psutil + GPU performans sayacı) ----
+  // Sunucu yalnızca okunabilen ölçümleri gönderir; satırlar ona göre kurulur.
+  var vitalKeys = "";
+  function renderVitals(vitals) {
+    if (!vitals || !vitals.length) return;
+    var imza = vitals.map(function (v) { return v.key; }).join(",");
+    if (imza !== vitalKeys) {           // ölçüm kümesi değiştiyse yeniden kur
+      vitalKeys = imza;
+      var box = $("vitals"); box.innerHTML = "";
+      vitals.forEach(function (v) {
+        var wrap = el("div", "margin-bottom:13px;");
+        var top = el("div", "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; gap:8px;");
+        top.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:rgba(190,230,250,.75);", v.label));
+        var sag = el("div", "display:flex; align-items:baseline; gap:8px;");
+        var det = el("span", "font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(160,215,240,.45);");
+        det.id = "det_" + v.key;
+        var val = el("span", "font-family:'JetBrains Mono',monospace; font-size:13px; color:#5fe0ff;");
+        val.id = "val_" + v.key;
+        sag.appendChild(det); sag.appendChild(val);
+        top.appendChild(sag);
+        var track = el("div", "position:relative; height:6px; background:rgba(95,224,255,.1); overflow:hidden;");
+        var fill = el("div", "position:absolute; inset:0 auto 0 0; width:0%; background:linear-gradient(90deg, rgba(95,224,255,.45), #5fe0ff); box-shadow:0 0 12px rgba(95,224,255,.6); transition:width .8s ease;");
+        fill.id = "bar_" + v.key;
+        track.appendChild(fill);
+        wrap.appendChild(top); wrap.appendChild(track);
+        box.appendChild(wrap);
+      });
     }
-  }
-
-  // ---- vitals barları (bir kez oluştur, sonra güncelle) ----
-  var vitalDefs = [
-    { key: "cpu",  label: "İŞLEMCİ" },
-    { key: "ram",  label: "BELLEK" },
-    { key: "gpu",  label: "GRAFİK" },
-    { key: "temp", label: "ÇEKİRDEK ISISI" }
-  ];
-  function buildVitals() {
-    var box = $("vitals");
-    vitalDefs.forEach(function (v) {
-      var wrap = el("div", "margin-bottom:13px;");
-      var top = el("div", "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;");
-      top.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:rgba(190,230,250,.75);", v.label));
-      var valSpan = el("span", "font-family:'JetBrains Mono',monospace; font-size:13px; color:#5fe0ff;"); valSpan.id = "val_" + v.key;
-      top.appendChild(valSpan);
-      var track = el("div", "position:relative; height:6px; background:rgba(95,224,255,.1); overflow:hidden;");
-      var fill = el("div", "position:absolute; inset:0 auto 0 0; width:0%; background:linear-gradient(90deg, rgba(95,224,255,.45), #5fe0ff); box-shadow:0 0 12px rgba(95,224,255,.6); transition:width .6s ease;");
-      fill.id = "bar_" + v.key;
-      track.appendChild(fill);
-      wrap.appendChild(top); wrap.appendChild(track);
-      box.appendChild(wrap);
+    vitals.forEach(function (v) {
+      $("val_" + v.key).textContent = v.value + v.unit;
+      $("det_" + v.key).textContent = v.detail || "";
+      var bar = $("bar_" + v.key);
+      bar.style.width = v.pct + "%";
+      // %90 üstü kullanım kırmızıya döner (gerçek bir baskı göstergesi)
+      bar.style.background = v.pct >= 90
+        ? "linear-gradient(90deg, rgba(255,122,122,.5), #ff7a7a)"
+        : "linear-gradient(90deg, rgba(95,224,255,.45), #5fe0ff)";
+      $("val_" + v.key).style.color = v.pct >= 90 ? "#ff9b9b" : "#5fe0ff";
     });
   }
-  function updateVitals() {
-    $("val_cpu").textContent = state.cpu + "%";   $("bar_cpu").style.width = state.cpu + "%";
-    $("val_ram").textContent = state.ram + "%";   $("bar_ram").style.width = state.ram + "%";
-    $("val_gpu").textContent = state.gpu + "%";   $("bar_gpu").style.width = state.gpu + "%";
-    $("val_temp").textContent = state.temp + "°C"; $("bar_temp").style.width = Math.round(state.temp / 90 * 100) + "%";
-  }
 
-  // ---- ağ barları ----
-  function buildNet() {
-    var box = $("netBars");
-    state.net.forEach(function () {
+  // ---- ağ barları (gerçek: psutil bayt sayaçları) ----
+  function renderNet(net) {
+    if (!net) return;
+    var box = $("netBars"), bars = net.bars || [];
+    while (box.children.length < bars.length) {
       box.appendChild(el("div", "flex:1; height:0%; background:linear-gradient(180deg, #5fe0ff, rgba(95,224,255,.12)); transition:height .45s ease;"));
-    });
-  }
-  function updateNet() {
-    var bars = $("netBars").children;
-    for (var i = 0; i < bars.length; i++) bars[i].style.height = state.net[i] + "%";
+    }
+    while (box.children.length > bars.length) box.removeChild(box.lastChild);
+    for (var i = 0; i < bars.length; i++) box.children[i].style.height = bars[i] + "%";
+
+    $("down").textContent = net.down;
+    $("up").textContent = net.up;
+    var p = (net.ping === null || net.ping === undefined) ? "--" : net.ping;
+    $("ping").textContent = p;
+    $("latPing").textContent = p;
+    $("netDetail").textContent = net.detail || "";
   }
 
   // ---- dalga barları ----
@@ -345,17 +406,30 @@
     $("micLabel").textContent = state.listening ? "KANAL AÇIK" : "SESSİZ";
   }
 
-  // ---- sistem kaydı ----
+  // ---- sistem kaydı (gerçek olaylar: sunucu + tarayıcı tarafı) ----
   function renderLogs() {
     var box = $("logs"); box.innerHTML = "";
-    state.logs.forEach(function (l) {
-      box.appendChild(el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; color:" + (l.color || "rgba(160,215,240,.75)") + ";", l.line));
+    state.logs.slice(-3).forEach(function (l) {
+      box.appendChild(el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; color:" + (l.color || "rgba(160,215,240,.75)") + "; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;", l.line));
     });
   }
   function pushLog(line, color) {
     var t = new Date().toLocaleTimeString("tr-TR", { hour12: false });
-    state.logs = state.logs.slice(-2).concat({ line: "[" + t + "] " + line, color: color || "rgba(160,215,240,.75)" });
+    state.logs = state.logs.slice(-9).concat({ line: "[" + t + "] " + line, color: color || "rgba(160,215,240,.75)" });
     renderLogs();
+  }
+  // Sunucu tarafındaki gerçek olayları (hatırlatıcı, yedekleme, STT) çeker
+  function pollLogs() {
+    fetch("/api/logs?after=" + state.sonOlayId)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        (d.events || []).forEach(function (e) {
+          state.sonOlayId = Math.max(state.sonOlayId, e.id);
+          state.logs = state.logs.slice(-9).concat({ line: e.line, color: e.color });
+        });
+        if ((d.events || []).length) renderLogs();
+      })
+      .catch(function () {});
   }
 
   // ---- mikrofon ----
@@ -404,73 +478,131 @@
     updateCore();
   }
 
-  // ---- BRIEF ME ----
+  // ---- BRIEF ME (gerçek: saat + hava + ajanda + sistem durumu) ----
   function briefMe() {
-    var D = window.JARVIS_DATA || {};
-    var etkinlik = (D.agenda || []).length, uyari = (D.alerts || []).length;
-    state.briefed = true;
-    var ozet = "Günaydın efendim. Bugün " + etkinlik + " etkinlik ve " + uyari + " uyarı var.";
-    $("transcript").textContent = ozet;
-    $("briefHint").textContent = "BRİFİNG İLETİLDİ";
-    pushLog("brifing derlendi — ajanda ve uyarılar özetlendi.", "#6effc0");
-    speak(ozet);
+    $("briefHint").textContent = "DERLENİYOR…";
+    fetch("/api/brief", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        $("transcript").textContent = d.text;
+        $("briefHint").textContent = "BRİFİNG İLETİLDİ";
+        speak(d.text);
+        setTimeout(function () { $("briefHint").textContent = "GÜNLÜK ÖZETİ SESLİ AKTAR"; }, 12000);
+      })
+      .catch(function () {
+        $("briefHint").textContent = "SUNUCUYA ULAŞILAMADI";
+        pushLog("brifing alınamadı — sunucu yanıt vermiyor.", "#ffb35c");
+      });
   }
 
-  // ---- hızlı komutlar ----
+  // ---- hızlı komutlar (hepsi sunucuda gerçek bir işlem yapar) ----
   var quickDefs = [
-    { label: "ODAK MODU", msg: "Odak modu etkin: bildirimler 90 dakika susturuldu." },
-    { label: "BRİFİNG",   msg: "Günlük brifing hazırlanıyor — başlıklar derleniyor." },
-    { label: "YEDEKLE",   msg: "Artımlı yedekleme başladı — tahmini 4 dakika." },
-    { label: "KİLİTLE",   msg: "Ev güvenlik moduna alınıyor. İyi geceler efendim." }
+    { id: "odak",    label: "ODAK MODU", calisiyor: "BİLDİRİMLER…" },
+    { id: "brifing", label: "BRİFİNG",   calisiyor: "DERLENİYOR…" },
+    { id: "yedekle", label: "YEDEKLE",   calisiyor: "YEDEKLENİYOR…" },
+    { id: "kilitle", label: "KİLİTLE",   calisiyor: "KİLİTLENİYOR…" }
   ];
   function buildQuick() {
     var box = $("quickCmds");
     quickDefs.forEach(function (q) {
       var b = el("div", "padding:12px 8px; text-align:center; border:1px solid rgba(95,224,255,.22); background:rgba(10,32,52,.45); cursor:pointer;");
       b.className = "quick hoverbtn";
-      b.appendChild(el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#a8e2fa;", q.label));
+      var etiket = el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#a8e2fa;", q.label);
+      etiket.id = "quick_" + q.id;
+      b.appendChild(etiket);
       b.addEventListener("click", function () {
-        $("transcript").textContent = q.msg;
-        pushLog(q.label.toLowerCase() + " rutini yürütülüyor…", "#ffc689");
+        if (b.dataset.busy) return;
+        b.dataset.busy = "1";
+        etiket.textContent = q.calisiyor;
+        fetch("/api/action/" + q.id, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var cevap = d.answer || "İşlem tamamlandı efendim.";
+            $("transcript").textContent = cevap;
+            speak(cevap);
+            if (q.id === "odak") state.focus = !!d.state;
+            cekTelemetri();
+          })
+          .catch(function () {
+            var m = "Sunucuya ulaşamadım efendim.";
+            $("transcript").textContent = m; pushLog(q.label.toLowerCase() + " başarısız — sunucu yok.", "#ffb35c");
+          })
+          .finally(function () {
+            delete b.dataset.busy;
+            etiket.textContent = q.id === "odak" && state.focus ? "ODAK: AÇIK" : q.label;
+          });
       });
       box.appendChild(b);
     });
   }
 
-  // ---- telemetri simülasyonu ----
-  function jitter(v, a, lo, hi) { return Math.max(lo, Math.min(hi, Math.round(v + (Math.random() - 0.5) * a))); }
-  function tickTelemetry() {
-    state.cpu = jitter(state.cpu, 10, 8, 92);
-    state.ram = jitter(state.ram, 5, 40, 88);
-    state.gpu = jitter(state.gpu, 14, 4, 80);
-    state.temp = jitter(state.temp, 3, 38, 72);
-    state.net = state.net.slice(1).concat(10 + Math.round(Math.random() * 85));
-    state.down = (2 + Math.random() * 8).toFixed(1);
-    state.up = (0.4 + Math.random() * 2.4).toFixed(1);
-    state.ping = 8 + Math.round(Math.random() * 14);
-    updateVitals(); updateNet();
-    $("down").textContent = state.down; $("up").textContent = state.up;
-    $("ping").textContent = state.ping; $("latPing").textContent = state.ping;
-  }
-  function tickWaveSim() {
-    if (analyser) return; // gerçek mikrofon varsa simülasyon durur
-    var on = state.listening;
-    state.level = on ? 0.25 + Math.random() * 0.5 : 0.05;
-    state.wave = Array.from({ length: 40 }, function (_, i) {
-      if (!on) return 5 + Math.round(6 * Math.abs(Math.sin(Date.now() / 700 + i / 4)));
-      var env = Math.sin((i / 39) * Math.PI);
-      return 8 + Math.round(88 * env * (0.35 + Math.random() * 0.65));
-    });
-    updateWave(); updateCore();
+  // ---- gerçek telemetriyi çek (sunucudaki psutil ölçümleri) ----
+  var telemetriHata = 0;
+  function cekTelemetri() {
+    fetch("/api/telemetry")
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        telemetriHata = 0;
+        renderVitals(d.vitals);
+        renderNet(d.net);
+        renderLinks(d.links, d.linkSummary);
+        renderAlerts(d.alerts);
+        state.focus = !!d.focus;
+        var odakEt = $("quick_odak");
+        if (odakEt && !odakEt.parentNode.dataset.busy) {
+          odakEt.textContent = state.focus ? "ODAK: AÇIK" : "ODAK MODU";
+          odakEt.style.color = state.focus ? "#6effc0" : "#a8e2fa";
+        }
+        setSystemStatus(d);
+      })
+      .catch(function () {
+        telemetriHata++;
+        if (telemetriHata === 3) {
+          setSystemStatus(null);
+          pushLog("telemetri alınamıyor — sunucu yanıt vermiyor.", "#ffb35c");
+        }
+      });
   }
 
-  // ---- veriyi periyodik yeniden yükle (http ile sunulunca canlı; file:// ile sessizce atlanır) ----
-  function reloadData() {
-    var s = document.createElement("script");
-    s.src = "jarvis_data.js?t=" + Date.now();
-    s.onload = function () { s.remove(); renderData(); };
-    s.onerror = function () { s.remove(); };
-    document.head.appendChild(s);
+  // Başlıktaki durum rozeti: gerçek ölçümlerden hesaplanır
+  function setSystemStatus(d) {
+    var nokta = $("statusDot"), yazi = $("statusText");
+    if (!d) {
+      nokta.style.background = "#ff7a7a";
+      nokta.style.boxShadow = "0 0 10px 2px rgba(255,122,122,.6)";
+      yazi.textContent = "SUNUCU YANIT VERMİYOR"; yazi.style.color = "#ff9b9b";
+      return;
+    }
+    var kritik = (d.alerts || []).filter(function (a) { return a.level === "kritik"; }).length;
+    var uyari = (d.alerts || []).filter(function (a) { return a.level === "uyari"; }).length;
+    var renk, metin;
+    if (kritik) { renk = "#ff7a7a"; metin = kritik + " KRİTİK UYARI"; }
+    else if (uyari) { renk = "#ffb35c"; metin = uyari + " UYARI"; }
+    else { renk = "#6effc0"; metin = "TÜM SİSTEMLER AKTİF"; }
+    nokta.style.background = renk;
+    nokta.style.boxShadow = "0 0 10px 2px " + renk + "99";
+    yazi.textContent = metin; yazi.style.color = renk;
+    $("hostName").textContent = (d.host || "").toUpperCase();
+  }
+
+  function cekHava() {
+    fetch("/api/weather").then(function (r) { return r.json(); }).then(renderWeather).catch(function () {});
+  }
+  function cekAjanda() {
+    fetch("/api/agenda").then(function (r) { return r.json(); })
+      .then(function (d) { renderAgenda(d.items); }).catch(function () {});
+  }
+
+  // Mikrofon kapalıyken dalga formu sakin bir taban çizgisi çizer (görsel).
+  function tickWaveIdle() {
+    if (analyser) return;              // gerçek mikrofon açıksa devreye girmez
+    state.level = 0.05;
+    state.wave = Array.from({ length: 40 }, function (_, i) {
+      return 5 + Math.round(4 * Math.abs(Math.sin(Date.now() / 900 + i / 5)));
+    });
+    updateWave(); updateCore();
   }
 
   // ---- SUNUCU MODU (gerçek sesli asistan) ----
@@ -689,14 +821,22 @@
 
   // ---- başlat ----
   function init() {
-    buildVitals(); buildNet(); buildWave(); buildQuick();
-    renderData();
-    tickClock(); updateVitals(); updateNet(); updateWave(); updateCore();
+    buildWave(); buildQuick();
+    tickClock(); updateWave(); updateCore();
     $("briefBtn").addEventListener("click", briefMe);
+    $("agAdd").addEventListener("click", ajandaEkle);
+    $("agTitle").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") ajandaEkle();
+    });
+
+    // Gerçek veriler: telemetri 2 sn, ajanda/olaylar 5 sn, hava 5 dk
+    cekTelemetri(); cekAjanda(); cekHava(); pollLogs();
     setInterval(tickClock, 1000);
-    setInterval(tickTelemetry, 1400);
-    setInterval(tickWaveSim, 120);
-    setInterval(reloadData, 5000);
+    setInterval(cekTelemetri, 2000);
+    setInterval(pollLogs, 3000);
+    setInterval(cekAjanda, 15000);
+    setInterval(cekHava, 300000);
+    setInterval(tickWaveIdle, 140);
 
     // Sunucu var mı? Birkaç kez dene (panel sunucudan önce açılmış olabilir).
     detectBackend(12);

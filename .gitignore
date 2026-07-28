@@ -10,5 +10,8 @@ venv/
 # Vosk konusma modeli (buyuk, ayrica indirilir)
 models/
 
-# Konusma gecmisi / hafiza (kisisel veri)
+# Konusma gecmisi / hafiza / hatirlaticilar (kisisel veri)
 data/
+
+# Yedek arsivleri
+*.zip

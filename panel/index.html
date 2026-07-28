@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S — Kontrol Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#03070e; }
+  * { box-sizing:border-box; }
+  body { font-family:'Rajdhani',sans-serif; color:#cfeeff; }
+  @keyframes jspin { to { transform: rotate(360deg); } }
+  @keyframes jspinrev { to { transform: rotate(-360deg); } }
+  @keyframes jscan { 0% { transform:translateY(-100%);} 100% { transform:translateY(2000%);} }
+  @keyframes jblink { 0%,45% { opacity:1;} 50%,95% { opacity:.15;} }
+  .mono { font-family:'JetBrains Mono',monospace; }
+  .hoverbtn { transition:all .18s ease; }
+  .mic-btn:hover { background:rgba(95,224,255,.2)!important; box-shadow:0 0 22px rgba(95,224,255,.35); }
+  .brief-btn:hover { border-color:#7ff0ff!important; background:linear-gradient(180deg, rgba(95,224,255,.3), rgba(95,224,255,.1))!important; box-shadow:0 0 30px rgba(95,224,255,.35); }
+  .quick:hover { border-color:#5fe0ff!important; background:rgba(95,224,255,.12)!important; }
+</style>
+</head>
+<body>
+<div style="position:relative; min-height:100vh; padding:22px 26px 18px; background:radial-gradient(1200px 700px at 50% 42%, #0b2740 0%, #061424 45%, #03070e 100%); overflow-x:auto; overflow-y:hidden;">
+
+  <!-- dekoratif katmanlar -->
+  <div style="position:absolute; inset:0; pointer-events:none; opacity:.16; background-image:linear-gradient(rgba(95,224,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(95,224,255,.5) 1px, transparent 1px); background-size:64px 64px; mask-image:radial-gradient(900px 600px at 50% 45%, #000 20%, transparent 85%); -webkit-mask-image:radial-gradient(900px 600px at 50% 45%, #000 20%, transparent 85%);"></div>
+  <div style="position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg, transparent, rgba(95,224,255,.55), transparent); animation:jscan 9s linear infinite; pointer-events:none;"></div>
+
+  <!-- HEADER -->
+  <header style="position:relative; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding-bottom:16px; border-bottom:1px solid rgba(95,224,255,.18);">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <div style="position:relative; width:44px; height:44px; display:grid; place-items:center;">
+        <div style="position:absolute; inset:0; border:1px solid rgba(95,224,255,.5); border-radius:50%; border-top-color:transparent; border-left-color:transparent; animation:jspin 6s linear infinite;"></div>
+        <div style="position:absolute; inset:7px; border:1px solid rgba(95,224,255,.3); border-radius:50%; border-bottom-color:transparent; animation:jspinrev 9s linear infinite;"></div>
+        <div style="width:10px; height:10px; border-radius:50%; background:#5fe0ff; box-shadow:0 0 14px 4px rgba(95,224,255,.7);"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="font-size:26px; font-weight:700; letter-spacing:.42em; color:#eaf9ff; text-shadow:0 0 18px rgba(95,224,255,.45);">J.A.R.V.I.S</div>
+        <div class="mono" style="font-size:10px; letter-spacing:.28em; color:rgba(160,215,240,.6);">KİŞİSEL KONTROL ARAYÜZÜ · <span id="version">v9.4</span></div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(95,224,255,.25); background:rgba(10,32,52,.5);">
+        <div style="width:7px; height:7px; border-radius:50%; background:#6effc0; box-shadow:0 0 10px 2px rgba(110,255,192,.6); animation:jblink 2.4s steps(1,end) infinite;"></div>
+        <span class="mono" style="font-size:10px; letter-spacing:.2em; color:#9fe8d0;">TÜM SİSTEMLER AKTİF</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(255,179,92,.28); background:rgba(40,26,10,.4);">
+        <span class="mono" style="font-size:10px; letter-spacing:.2em; color:#ffc689;">GÜVENLİ HAT · AES-512</span>
+      </div>
+      <div style="text-align:right; min-width:150px;">
+        <div class="mono" id="clock" style="font-size:28px; font-weight:400; color:#eaf9ff; letter-spacing:.06em; line-height:1;">--:--:--</div>
+        <div class="mono" id="dateStr" style="font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55); margin-top:4px;"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main style="position:relative; display:grid; grid-template-columns:minmax(240px,300px) minmax(300px,1fr) minmax(260px,320px); gap:18px; margin-top:18px; align-items:start;">
+
+    <!-- SOL SÜTUN -->
+    <div style="display:flex; flex-direction:column; gap:18px;">
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5)); backdrop-filter:blur(2px);">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">SİSTEM YAŞAM BELİRTİLERİ</div>
+          <div class="mono" style="font-size:9px; color:rgba(160,215,240,.45);">LIVE</div>
+        </div>
+        <div id="vitals"></div>
+      </section>
+
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:12px;">AĞ TRAFİĞİ</div>
+        <div id="netBars" style="display:flex; align-items:flex-end; gap:3px; height:76px;"></div>
+        <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:10px; color:rgba(160,215,240,.6);" class="mono">
+          <span>↓ <span id="down">4.2</span> MB/s</span>
+          <span>↑ <span id="up">1.1</span> MB/s</span>
+          <span>PING <span id="ping">12</span>ms</span>
+        </div>
+      </section>
+
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:12px;">HAVA · <span id="weatherCity">İSTANBUL</span></div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div class="mono" id="weatherTemp" style="font-size:44px; color:#eaf9ff; line-height:1;">28°</div>
+          <div style="text-align:right; display:flex; flex-direction:column; gap:3px;">
+            <span id="weatherDesc" style="font-size:15px; letter-spacing:.1em; color:#bfe8fa;">Parçalı Bulutlu</span>
+            <span class="mono" id="weatherMeta1" style="font-size:10px; color:rgba(160,215,240,.55);">NEM %52 · RÜZGAR 11 km/s</span>
+            <span class="mono" id="weatherMeta2" style="font-size:10px; color:rgba(160,215,240,.55);">HİSSEDİLEN 30° · UV 6</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ORTA SÜTUN -->
+    <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+      <div style="position:relative; width:100%; aspect-ratio:1/1; max-height:430px; display:grid; place-items:center;">
+        <div style="position:absolute; width:100%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle, rgba(95,224,255,.10) 40%, rgba(95,224,255,.03) 62%, transparent 72%);"></div>
+        <div id="ringOuter" style="position:absolute; width:96%; aspect-ratio:1/1; border-radius:50%; border:1px solid rgba(95,224,255,.35); border-style:dashed; animation:jspin 44s linear infinite;"></div>
+        <div style="position:absolute; width:82%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(95,224,255,.55); border-right-color:transparent; border-bottom-color:transparent; box-shadow:0 0 18px rgba(95,224,255,.25); animation:jspinrev 18s linear infinite;"></div>
+        <div style="position:absolute; width:70%; aspect-ratio:1/1; border-radius:50%; border:1px solid rgba(95,224,255,.35);"></div>
+        <div style="position:absolute; width:66%; aspect-ratio:1/1; border-radius:50%; border:3px solid rgba(95,224,255,.30); border-top-color:#7ff0ff; box-shadow:0 0 26px rgba(95,224,255,.35); animation:jspin 7s linear infinite;"></div>
+        <div id="ringAmber" style="position:absolute; width:48%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(255,179,92,.55); border-left-color:transparent; animation:jspinrev 11s linear infinite; transition:width .09s linear;"></div>
+        <div id="aura" style="position:absolute; width:52%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle, rgba(95,224,255,.16) 0%, rgba(95,224,255,.06) 55%, transparent 72%); transition:width .09s linear;"></div>
+        <div id="core" style="position:absolute; width:34%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(200,246,255,.9); background:radial-gradient(circle, #ffffff 0%, #d8f7ff 22%, #5fe0ff 55%, #1b6f96 82%, #0a3c55 100%); box-shadow:0 0 45px 10px rgba(95,224,255,.55), inset 0 0 40px rgba(255,255,255,.45); transition:width .09s linear, box-shadow .09s linear;"></div>
+        <div style="position:relative; text-align:center; pointer-events:none;">
+          <div class="mono" id="coreState" style="font-size:12px; font-weight:500; letter-spacing:.3em; color:#04202e;">BEKLEMEDE</div>
+          <div class="mono" id="coreLevel" style="font-size:9px; letter-spacing:.24em; color:rgba(4,32,46,.65); margin-top:4px;">LVL 005</div>
+        </div>
+        <div class="mono" style="position:absolute; left:0; top:50%; font-size:9px; letter-spacing:.2em; color:rgba(160,215,240,.45);">SYNC 100%</div>
+        <div class="mono" style="position:absolute; right:0; top:50%; font-size:9px; letter-spacing:.2em; color:rgba(160,215,240,.45);">LAT <span id="latPing">12</span>ms</div>
+      </div>
+
+      <!-- SESLİ KOMUT -->
+      <div style="width:100%; padding:16px 18px; border:1px solid rgba(95,224,255,.22); background:linear-gradient(180deg, rgba(10,34,56,.7), rgba(6,20,34,.55));">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">SESLİ KOMUT</div>
+          <div class="mono" id="micLabel" style="font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55);">SESSİZ</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div id="micBtn" class="mic-btn hoverbtn" style="flex-shrink:0; width:56px; height:56px; border-radius:50%; border:1px solid rgba(95,224,255,.45); display:grid; place-items:center; cursor:pointer; background:rgba(95,224,255,.08);">
+            <div style="width:14px; height:22px; border-radius:7px; border:2px solid #5fe0ff;"></div>
+          </div>
+          <div id="waveBars" style="flex:1; display:flex; align-items:center; gap:3px; height:56px;"></div>
+        </div>
+        <div style="margin-top:14px; padding:10px 12px; border-left:2px solid #5fe0ff; background:rgba(95,224,255,.06);">
+          <div class="mono" id="transcript" style="font-size:12px; color:#eaf9ff;">Hazırım. Bir komut bekliyorum.</div>
+        </div>
+      </div>
+
+      <!-- BRIEF ME -->
+      <div id="briefBtn" class="brief-btn hoverbtn" style="width:100%; padding:16px; text-align:center; cursor:pointer; border:1px solid rgba(95,224,255,.55); background:linear-gradient(180deg, rgba(95,224,255,.16), rgba(95,224,255,.05)); box-shadow:0 0 24px rgba(95,224,255,.18) inset;">
+        <div style="font-size:19px; font-weight:700; letter-spacing:.4em; color:#eaf9ff; text-shadow:0 0 16px rgba(95,224,255,.5);">BRIEF ME</div>
+        <div class="mono" id="briefHint" style="font-size:9px; letter-spacing:.22em; color:rgba(160,215,240,.6); margin-top:5px;">GÜNLÜK ÖZETİ SESLİ AKTAR</div>
+      </div>
+
+      <!-- HIZLI KOMUTLAR -->
+      <div id="quickCmds" style="width:100%; display:grid; grid-template-columns:repeat(4,1fr); gap:10px;"></div>
+    </div>
+
+    <!-- SAĞ SÜTUN -->
+    <div style="display:flex; flex-direction:column; gap:18px;">
+      <section style="padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">BAĞLANTI DURUMLARI</div>
+          <div class="mono" id="linkSummary" style="font-size:9px; color:rgba(160,215,240,.45);">4/5 STABİL</div>
+        </div>
+        <div id="links" style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;"></div>
+
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:14px;">BUGÜNÜN AJANDASI</div>
+        <div id="agenda" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </section>
+
+      <section style="padding:16px; border:1px solid rgba(255,179,92,.24); background:linear-gradient(180deg, rgba(44,30,12,.5), rgba(20,14,6,.4));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#ffc689; margin-bottom:12px;">DİKKAT GEREKTİREN</div>
+        <div id="alerts" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer style="position:relative; margin-top:18px; padding:11px 16px; border:1px solid rgba(95,224,255,.16); background:rgba(6,20,34,.6); display:flex; align-items:center; gap:16px;">
+    <span class="mono" style="font-size:9px; letter-spacing:.22em; color:rgba(160,215,240,.5); flex-shrink:0;">SİSTEM KAYDI</span>
+    <div id="logs" style="flex:1; display:flex; flex-direction:column; gap:3px; max-height:52px; overflow:hidden;"></div>
+  </footer>
+</div>
+
+<!-- Günlük veriler (hatırlatıcı/ajanda vb.) -->
+<script src="jarvis_data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var two = function (n) { return String(n).padStart(2, "0"); };
+
+  // ---- durum ----
+  var state = {
+    cpu: 34, ram: 61, gpu: 22, temp: 48,
+    net: Array.from({ length: 28 }, function (_, i) { return 20 + Math.round(40 * Math.abs(Math.sin(i / 3))); }),
+    wave: Array.from({ length: 40 }, function () { return 8; }),
+    listening: false, level: 0.05, briefed: false,
+    down: "4.2", up: "1.1", ping: 12,
+    logs: []
+  };
+  var analyser = null, stream = null, actx = null, freq = null, raf = null;
+
+  // ---- TARAYICI SESİ (JARVIS panelde konuşur; sunucu çökse bile çalışır) ----
+  var trVoice = null;
+  function pickVoice() {
+    if (!window.speechSynthesis) return;
+    var vs = window.speechSynthesis.getVoices() || [];
+    trVoice = vs.filter(function (v) { return /tr/i.test(v.lang) || /tolga|turk/i.test(v.name); })[0] || null;
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text) {
+    if (!text || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "tr-TR";
+      if (trVoice) u.voice = trVoice;
+      u.rate = 1.0; u.pitch = 1.0;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ---- SAAT (gerçek zamanlı) ----
+  function tickClock() {
+    var d = new Date();
+    $("clock").textContent = two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds());
+    $("dateStr").textContent = d.toLocaleDateString("tr-TR",
+      { weekday: "long", day: "numeric", month: "long", year: "numeric" }).toUpperCase();
+  }
+
+  // ---- statik listeleri (jarvis_data.js) render et ----
+  function el(tag, css, html) {
+    var e = document.createElement(tag);
+    if (css) e.setAttribute("style", css);
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  function renderData() {
+    var D = window.JARVIS_DATA || {};
+    if (D.version) $("version").textContent = D.version;
+
+    // hava
+    if (D.weather) {
+      var w = D.weather;
+      if (w.city)  $("weatherCity").textContent = w.city;
+      if (w.temp)  $("weatherTemp").textContent = w.temp;
+      if (w.desc)  $("weatherDesc").textContent = w.desc;
+      if (w.meta1) $("weatherMeta1").textContent = w.meta1;
+      if (w.meta2) $("weatherMeta2").textContent = w.meta2;
+    }
+
+    // bağlantılar
+    if (D.linkSummary) $("linkSummary").textContent = D.linkSummary;
+    var linksBox = $("links"); linksBox.innerHTML = "";
+    (D.links || []).forEach(function (k) {
+      var row = el("div", "display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid rgba(95,224,255,.12); background:rgba(6,22,38,.45);");
+      row.appendChild(el("div", "width:6px; height:6px; border-radius:50%; background:" + k.dot + "; box-shadow:0 0 8px 2px " + k.glow + "; flex-shrink:0;"));
+      row.appendChild(el("span", "flex:1; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; color:rgba(200,235,250,.85);", k.name));
+      row.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; color:" + k.dot + ";", k.status));
+      linksBox.appendChild(row);
+    });
+
+    // ajanda / hatırlatıcılar
+    var ag = $("agenda"); ag.innerHTML = "";
+    (D.agenda || []).forEach(function (a) {
+      var row = el("div", "display:flex; gap:12px; align-items:flex-start;");
+      row.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:11px; color:#5fe0ff; padding-top:2px; min-width:44px;", a.time));
+      var col = el("div", "flex:1; display:flex; flex-direction:column; gap:2px; padding-left:12px; border-left:1px solid rgba(95,224,255,.2);");
+      col.appendChild(el("span", "font-size:14px; color:#d6f1ff; letter-spacing:.03em;", a.title));
+      col.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:rgba(160,215,240,.5);", a.meta || ""));
+      row.appendChild(col);
+      ag.appendChild(row);
+    });
+
+    // uyarılar
+    var al = $("alerts"); al.innerHTML = "";
+    (D.alerts || []).forEach(function (item) {
+      var row = el("div", "display:flex; gap:10px; align-items:baseline;");
+      row.appendChild(el("span", "color:#ffb35c; font-family:'JetBrains Mono',monospace; font-size:11px;", "!"));
+      row.appendChild(el("span", "font-size:14px; color:#ffddb5; letter-spacing:.03em; line-height:1.35;", item.text));
+      al.appendChild(row);
+    });
+
+    // loglar (yalnızca ilk yüklemede tohumla)
+    if (state.logs.length === 0 && D.logs) {
+      state.logs = D.logs.slice(-3);
+      renderLogs();
+    }
+  }
+
+  // ---- vitals barları (bir kez oluştur, sonra güncelle) ----
+  var vitalDefs = [
+    { key: "cpu",  label: "İŞLEMCİ" },
+    { key: "ram",  label: "BELLEK" },
+    { key: "gpu",  label: "GRAFİK" },
+    { key: "temp", label: "ÇEKİRDEK ISISI" }
+  ];
+  function buildVitals() {
+    var box = $("vitals");
+    vitalDefs.forEach(function (v) {
+      var wrap = el("div", "margin-bottom:13px;");
+      var top = el("div", "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;");
+      top.appendChild(el("span", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:rgba(190,230,250,.75);", v.label));
+      var valSpan = el("span", "font-family:'JetBrains Mono',monospace; font-size:13px; color:#5fe0ff;"); valSpan.id = "val_" + v.key;
+      top.appendChild(valSpan);
+      var track = el("div", "position:relative; height:6px; background:rgba(95,224,255,.1); overflow:hidden;");
+      var fill = el("div", "position:absolute; inset:0 auto 0 0; width:0%; background:linear-gradient(90deg, rgba(95,224,255,.45), #5fe0ff); box-shadow:0 0 12px rgba(95,224,255,.6); transition:width .6s ease;");
+      fill.id = "bar_" + v.key;
+      track.appendChild(fill);
+      wrap.appendChild(top); wrap.appendChild(track);
+      box.appendChild(wrap);
+    });
+  }
+  function updateVitals() {
+    $("val_cpu").textContent = state.cpu + "%";   $("bar_cpu").style.width = state.cpu + "%";
+    $("val_ram").textContent = state.ram + "%";   $("bar_ram").style.width = state.ram + "%";
+    $("val_gpu").textContent = state.gpu + "%";   $("bar_gpu").style.width = state.gpu + "%";
+    $("val_temp").textContent = state.temp + "°C"; $("bar_temp").style.width = Math.round(state.temp / 90 * 100) + "%";
+  }
+
+  // ---- ağ barları ----
+  function buildNet() {
+    var box = $("netBars");
+    state.net.forEach(function () {
+      box.appendChild(el("div", "flex:1; height:0%; background:linear-gradient(180deg, #5fe0ff, rgba(95,224,255,.12)); transition:height .45s ease;"));
+    });
+  }
+  function updateNet() {
+    var bars = $("netBars").children;
+    for (var i = 0; i < bars.length; i++) bars[i].style.height = state.net[i] + "%";
+  }
+
+  // ---- dalga barları ----
+  function buildWave() {
+    var box = $("waveBars");
+    state.wave.forEach(function () {
+      box.appendChild(el("div", "flex:1; height:8%; min-height:2px; background:#5fe0ff; opacity:.85; border-radius:1px; transition:height .12s linear;"));
+    });
+  }
+  function updateWave() {
+    var bars = $("waveBars").children;
+    for (var i = 0; i < bars.length; i++) bars[i].style.height = state.wave[i] + "%";
+  }
+
+  // ---- enerji çekirdeği güncelle ----
+  function updateCore() {
+    var lvl = state.level;
+    $("core").style.width = (34 + lvl * 16).toFixed(1) + "%";
+    $("core").style.boxShadow = "0 0 " + Math.round(45 + lvl * 90) + "px 10px rgba(95,224,255,.55), inset 0 0 40px rgba(255,255,255,.45)";
+    $("aura").style.width = (52 + lvl * 30).toFixed(1) + "%";
+    $("aura").style.background = "radial-gradient(circle, rgba(95,224,255," + (0.16 + lvl * 0.34).toFixed(2) + ") 0%, rgba(95,224,255,.06) 55%, transparent 72%)";
+    $("ringAmber").style.width = (48 + lvl * 8).toFixed(1) + "%";
+    $("ringOuter").style.width = (94 + lvl * 5).toFixed(1) + "%";
+    $("coreState").textContent = state.listening ? "DİNLİYOR" : "BEKLEMEDE";
+    $("coreLevel").textContent = "LVL " + String(Math.round(lvl * 100)).padStart(3, "0");
+    $("micLabel").textContent = state.listening ? "KANAL AÇIK" : "SESSİZ";
+  }
+
+  // ---- sistem kaydı ----
+  function renderLogs() {
+    var box = $("logs"); box.innerHTML = "";
+    state.logs.forEach(function (l) {
+      box.appendChild(el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; color:" + (l.color || "rgba(160,215,240,.75)") + ";", l.line));
+    });
+  }
+  function pushLog(line, color) {
+    var t = new Date().toLocaleTimeString("tr-TR", { hour12: false });
+    state.logs = state.logs.slice(-2).concat({ line: "[" + t + "] " + line, color: color || "rgba(160,215,240,.75)" });
+    renderLogs();
+  }
+
+  // ---- mikrofon ----
+  function startMic() {
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+      .then(function (s) {
+        stream = s;
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        var srcNode = actx.createMediaStreamSource(s);
+        analyser = actx.createAnalyser();
+        analyser.fftSize = 128; analyser.smoothingTimeConstant = 0.72;
+        srcNode.connect(analyser);
+        freq = new Uint8Array(analyser.frequencyBinCount);
+        pushLog("mikrofon dizisi bağlandı — canlı ses analizi aktif.", "#6effc0");
+        micLoop();
+      })
+      .catch(function () {
+        pushLog("mikrofon erişimi reddedildi — simülasyon moduna geçildi.", "#ffc689");
+      });
+  }
+  function stopMic() {
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    if (actx) actx.close();
+    stream = null; actx = null; analyser = null;
+  }
+  function micLoop() {
+    if (!analyser) return;
+    analyser.getByteFrequencyData(freq);
+    var n = 40, bins = freq.length, wave = [], sum = 0;
+    for (var i = 0; i < n; i++) {
+      var v = freq[Math.floor(i / n * bins * 0.7)] / 255;
+      sum += v;
+      wave.push(6 + Math.round(94 * Math.pow(v, 0.85)));
+    }
+    state.wave = wave;
+    state.level = Math.min(1, (sum / n) * 2.2);
+    updateWave(); updateCore();
+    raf = requestAnimationFrame(micLoop);
+  }
+
+  function toggleListen() {
+    state.listening = !state.listening;
+    $("transcript").textContent = state.listening ? "Dinliyorum…" : "Hazırım. Bir komut bekliyorum.";
+    if (state.listening) { startMic(); }
+    else { cancelAnimationFrame(raf); stopMic(); state.level = 0.05; updateCore(); pushLog("mikrofon dizisi kapatıldı.", "#5fe0ff"); }
+    updateCore();
+  }
+
+  // ---- BRIEF ME ----
+  function briefMe() {
+    var D = window.JARVIS_DATA || {};
+    var etkinlik = (D.agenda || []).length, uyari = (D.alerts || []).length;
+    state.briefed = true;
+    var ozet = "Günaydın efendim. Bugün " + etkinlik + " etkinlik ve " + uyari + " uyarı var.";
+    $("transcript").textContent = ozet;
+    $("briefHint").textContent = "BRİFİNG İLETİLDİ";
+    pushLog("brifing derlendi — ajanda ve uyarılar özetlendi.", "#6effc0");
+    speak(ozet);
+  }
+
+  // ---- hızlı komutlar ----
+  var quickDefs = [
+    { label: "ODAK MODU", msg: "Odak modu etkin: bildirimler 90 dakika susturuldu." },
+    { label: "BRİFİNG",   msg: "Günlük brifing hazırlanıyor — başlıklar derleniyor." },
+    { label: "YEDEKLE",   msg: "Artımlı yedekleme başladı — tahmini 4 dakika." },
+    { label: "KİLİTLE",   msg: "Ev güvenlik moduna alınıyor. İyi geceler efendim." }
+  ];
+  function buildQuick() {
+    var box = $("quickCmds");
+    quickDefs.forEach(function (q) {
+      var b = el("div", "padding:12px 8px; text-align:center; border:1px solid rgba(95,224,255,.22); background:rgba(10,32,52,.45); cursor:pointer;");
+      b.className = "quick hoverbtn";
+      b.appendChild(el("div", "font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#a8e2fa;", q.label));
+      b.addEventListener("click", function () {
+        $("transcript").textContent = q.msg;
+        pushLog(q.label.toLowerCase() + " rutini yürütülüyor…", "#ffc689");
+      });
+      box.appendChild(b);
+    });
+  }
+
+  // ---- telemetri simülasyonu ----
+  function jitter(v, a, lo, hi) { return Math.max(lo, Math.min(hi, Math.round(v + (Math.random() - 0.5) * a))); }
+  function tickTelemetry() {
+    state.cpu = jitter(state.cpu, 10, 8, 92);
+    state.ram = jitter(state.ram, 5, 40, 88);
+    state.gpu = jitter(state.gpu, 14, 4, 80);
+    state.temp = jitter(state.temp, 3, 38, 72);
+    state.net = state.net.slice(1).concat(10 + Math.round(Math.random() * 85));
+    state.down = (2 + Math.random() * 8).toFixed(1);
+    state.up = (0.4 + Math.random() * 2.4).toFixed(1);
+    state.ping = 8 + Math.round(Math.random() * 14);
+    updateVitals(); updateNet();
+    $("down").textContent = state.down; $("up").textContent = state.up;
+    $("ping").textContent = state.ping; $("latPing").textContent = state.ping;
+  }
+  function tickWaveSim() {
+    if (analyser) return; // gerçek mikrofon varsa simülasyon durur
+    var on = state.listening;
+    state.level = on ? 0.25 + Math.random() * 0.5 : 0.05;
+    state.wave = Array.from({ length: 40 }, function (_, i) {
+      if (!on) return 5 + Math.round(6 * Math.abs(Math.sin(Date.now() / 700 + i / 4)));
+      var env = Math.sin((i / 39) * Math.PI);
+      return 8 + Math.round(88 * env * (0.35 + Math.random() * 0.65));
+    });
+    updateWave(); updateCore();
+  }
+
+  // ---- veriyi periyodik yeniden yükle (http ile sunulunca canlı; file:// ile sessizce atlanır) ----
+  function reloadData() {
+    var s = document.createElement("script");
+    s.src = "jarvis_data.js?t=" + Date.now();
+    s.onload = function () { s.remove(); renderData(); };
+    s.onerror = function () { s.remove(); };
+    document.head.appendChild(s);
+  }
+
+  // ---- SUNUCU MODU (gerçek sesli asistan) ----
+  var BACKEND = false;     // sunucu (server.py) ile açıldıysa true
+  var kayitAktif = false;
+
+  // Tarayıcıda kayıt: bas → anında MediaRecorder başlar, bırak → sunucuya gönder
+  var mediaRecorder = null, mediaStream = null, audioChunks = [];
+
+  function ensureStream() {
+    if (mediaStream) return Promise.resolve(mediaStream);
+    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+      .then(function (s) { mediaStream = s; return s; });
+  }
+
+  function backendBaslat() {
+    if (kayitAktif) return;
+    ensureStream().then(function (s) {
+      kayitAktif = true;
+      state.listening = true;
+      $("transcript").textContent = "Dinliyorum…";
+      updateCore();
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(s);
+      mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.start();
+    }).catch(function () {
+      var m = "Mikrofona erişemedim efendim, lütfen tarayıcıda izin verin.";
+      $("transcript").textContent = m; pushLog("mikrofon izni yok.", "#ffb35c"); speak(m);
+    });
+  }
+
+  function backendBitir() {
+    if (!kayitAktif || !mediaRecorder) return;
+    kayitAktif = false;
+    state.listening = false;
+    updateCore();
+    $("transcript").textContent = "İşleniyor…";
+    mediaRecorder.onstop = function () {
+      var blob = new Blob(audioChunks, { type: "audio/webm" });
+      if (!blob.size) { $("transcript").textContent = "Sizi duyamadım efendim."; return; }
+      var fd = new FormData();
+      fd.append("audio", blob, "ses.webm");
+      fetch("/transcribe", { method: "POST", body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.heard) pushLog("sen: " + d.heard, "#a8e2fa");
+          var cevap = d.answer || "Bir cevap alamadım efendim.";
+          $("transcript").textContent = cevap;
+          if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
+          speak(cevap);
+        })
+        .catch(function () {
+          var msg = "Sunucuya ulaşılamadı efendim. Lütfen JARVIS'i yeniden başlatın.";
+          $("transcript").textContent = msg;
+          pushLog("sunucuya ulaşılamadı.", "#ffb35c");
+          speak(msg);
+        });
+    };
+    mediaRecorder.stop();
+  }
+
+  function wireMic() {
+    var mic = $("micBtn");
+    if (BACKEND) {
+      // Panelin mic butonuna BASILI TUT (mouse) veya BOŞLUK tuşuna basılı tut
+      mic.addEventListener("mousedown", backendBaslat);
+      document.addEventListener("mouseup", backendBitir);
+      mic.addEventListener("touchstart", function (e) { e.preventDefault(); backendBaslat(); }, { passive: false });
+      document.addEventListener("touchend", function () { backendBitir(); });
+      document.addEventListener("keydown", function (e) {
+        if (e.code === "Space" && !e.repeat) { e.preventDefault(); backendBaslat(); }
+      });
+      document.addEventListener("keyup", function (e) {
+        if (e.code === "Space") { e.preventDefault(); backendBitir(); }
+      });
+      $("micLabel").textContent = "BASILI TUT · KONUŞ";
+    } else {
+      // file:// ile açıldıysa: sadece yerel görsel (eski davranış)
+      mic.addEventListener("click", toggleListen);
+    }
+  }
+
+  // ---- başlat ----
+  function init() {
+    buildVitals(); buildNet(); buildWave(); buildQuick();
+    renderData();
+    tickClock(); updateVitals(); updateNet(); updateWave(); updateCore();
+    $("briefBtn").addEventListener("click", briefMe);
+    setInterval(tickClock, 1000);
+    setInterval(tickTelemetry, 1400);
+    setInterval(tickWaveSim, 120);
+    setInterval(reloadData, 5000);
+
+    // Sunucu var mı? Birkaç kez dene (panel sunucudan önce açılmış olabilir).
+    detectBackend(12);
+  }
+
+  var micWired = false;
+  function detectBackend(kalan) {
+    fetch("/health").then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (h) {
+        if (h && h.ok) { BACKEND = true; if (!micWired) { micWired = true; wireMic(); } }
+        else retryBackend(kalan);
+      })
+      .catch(function () { retryBackend(kalan); });
+  }
+  function retryBackend(kalan) {
+    if (kalan > 0) { setTimeout(function () { detectBackend(kalan - 1); }, 500); }
+    else if (!micWired) { micWired = true; BACKEND = false; wireMic(); }
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+</body>
+</html>

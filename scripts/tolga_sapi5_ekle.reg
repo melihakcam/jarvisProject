@@ -1,0 +1,29 @@
+Windows Registry Editor Version 5.00
+
+; JARVIS - Turkce "Microsoft Tolga" sesini SAPI5'e ekler.
+; Boylece pyttsx3 (ve diger SAPI5 uygulamalari) Tolga'yi gorebilir ve
+; JARVIS duzgun Turkce konusabilir.
+;
+; KULLANIM: Bu dosyaya sag tikla -> "Birlestir" (Merge) -> UAC onayi ver.
+;           (Yonetici izni gerekir.)
+;
+; GERI ALMA: Asagidaki iki anahtari Kayit Defteri Duzenleyicisi'nden silmen yeterli:
+;   HKLM\SOFTWARE\Microsoft\Speech\Voices\Tokens\MSTTS_V110_trTR_Tolga
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\MSTTS_V110_trTR_Tolga]
+@="Microsoft Tolga - Turkish (Turkey)"
+"041f"="Microsoft Tolga - Turkish (Turkey)"
+"CLSID"="{179F3D56-1B0B-42B2-A962-59B7EF59FE1B}"
+"LangDataPath"="C:\\WINDOWS\\Speech_OneCore\\Engines\\TTS\\tr-TR\\MSTTSLocTrTR.dat"
+"VoicePath"="C:\\WINDOWS\\Speech_OneCore\\Engines\\TTS\\tr-TR\\M1055Tolga"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\MSTTS_V110_trTR_Tolga\Attributes]
+"Age"="Adult"
+"DataVersion"="11.0.2016.0129"
+"Gender"="Male"
+"Language"="041f"
+"Name"="Microsoft Tolga"
+"SayAsSupport"="spell=NativeSupported; alphanumeric=NativeSupported"
+"SharedPronunciation"=""
+"Vendor"="Microsoft"
+"Version"="11.0"

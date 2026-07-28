@@ -1,0 +1,10 @@
+# JARVIS - Python bağımlılıkları
+# Kurulum:  pip install -r requirements.txt
+
+faster-whisper        # Ses -> Yazi (Whisper, cok dogru Turkce, offline)  [onerilen]
+numpy                 # Whisper icin ses tamponu
+vosk==0.3.45          # Ses -> Yazi (hafif yedek motor)
+sounddevice==0.4.7    # Mikrofondan ses yakalama
+pyttsx3==2.90         # Yazi -> Ses (Windows SAPI, terminal modu icin)
+flask                 # Panel sunucusu
+keyboard==0.13.5      # Push-to-talk (terminal modu)

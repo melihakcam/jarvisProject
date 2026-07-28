@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#03070e; }
+  * { box-sizing:border-box; }
+  a { color:#5fe0ff; text-decoration:none; }
+  a:hover { color:#b9f2ff; }
+  @keyframes jspin { to { transform: rotate(360deg); } }
+  @keyframes jspinrev { to { transform: rotate(-360deg); } }
+  @keyframes jpulse { 0%,100% { opacity:.35; transform:scale(1);} 50% { opacity:.9; transform:scale(1.04);} }
+  @keyframes jbreathe { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+  @keyframes jscan { 0% { transform:translateY(-100%);} 100% { transform:translateY(2000%);} }
+  @keyframes jblink { 0%,45% { opacity:1;} 50%,95% { opacity:.15;} }
+  @keyframes jdash { to { stroke-dashoffset:-1000; } }
+</style>
+</helmet>
+<div style="position:relative; min-height:100vh; padding:22px 26px 18px; font-family:'Rajdhani',sans-serif; color:#cfeeff; background:radial-gradient(1200px 700px at 50% 42%, #0b2740 0%, #061424 45%, #03070e 100%); overflow-x:auto; overflow-y:hidden;">
+
+  <div style="position:absolute; inset:0; pointer-events:none; opacity:.16; background-image:linear-gradient(rgba(95,224,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(95,224,255,.5) 1px, transparent 1px); background-size:64px 64px; mask-image:radial-gradient(900px 600px at 50% 45%, #000 20%, transparent 85%); -webkit-mask-image:radial-gradient(900px 600px at 50% 45%, #000 20%, transparent 85%);"></div>
+  <div style="position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg, transparent, rgba(95,224,255,.55), transparent); animation:jscan 9s linear infinite; pointer-events:none;"></div>
+
+  <header style="position:relative; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding-bottom:16px; border-bottom:1px solid rgba(95,224,255,.18);">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <div style="position:relative; width:44px; height:44px; display:grid; place-items:center;">
+        <div style="position:absolute; inset:0; border:1px solid rgba(95,224,255,.5); border-radius:50%; border-top-color:transparent; border-left-color:transparent; animation:jspin 6s linear infinite;"></div>
+        <div style="position:absolute; inset:7px; border:1px solid rgba(95,224,255,.3); border-radius:50%; border-bottom-color:transparent; animation:jspinrev 9s linear infinite;"></div>
+        <div style="width:10px; height:10px; border-radius:50%; background:#5fe0ff; box-shadow:0 0 14px 4px rgba(95,224,255,.7);"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="font-size:26px; font-weight:700; letter-spacing:.42em; color:#eaf9ff; text-shadow:0 0 18px rgba(95,224,255,.45);">J.A.R.V.I.S</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.28em; color:rgba(160,215,240,.6);">KİŞİSEL KONTROL ARAYÜZÜ · v9.4</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(95,224,255,.25); background:rgba(10,32,52,.5);">
+        <div style="width:7px; height:7px; border-radius:50%; background:#6effc0; box-shadow:0 0 10px 2px rgba(110,255,192,.6); animation:jblink 2.4s steps(1,end) infinite;"></div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; color:#9fe8d0;">TÜM SİSTEMLER AKTİF</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid rgba(255,179,92,.28); background:rgba(40,26,10,.4);">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; color:#ffc689;">GÜVENLİ HAT · AES-512</span>
+      </div>
+      <div style="text-align:right; min-width:150px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:400; color:#eaf9ff; letter-spacing:.06em; line-height:1;">{{ clock }}</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55); margin-top:4px;">{{ dateStr }}</div>
+      </div>
+    </div>
+  </header>
+
+  <main style="position:relative; display:grid; grid-template-columns:minmax(240px,300px) minmax(300px,1fr) minmax(260px,320px); gap:18px; margin-top:18px; align-items:start;">
+
+    <div style="display:flex; flex-direction:column; gap:18px;">
+
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5)); backdrop-filter:blur(2px);">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">SİSTEM YAŞAM BELİRTİLERİ</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(160,215,240,.45);">LIVE</div>
+        </div>
+        <sc-for list="{{ vitals }}" as="v" hint-placeholder-count="4">
+          <div style="margin-bottom:13px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:rgba(190,230,250,.75);">{{ v.label }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#5fe0ff;">{{ v.readout }}</span>
+            </div>
+            <div style="position:relative; height:6px; background:rgba(95,224,255,.1); overflow:hidden;">
+              <div style="position:absolute; inset:0 auto 0 0; width:{{ v.pct }}%; background:linear-gradient(90deg, rgba(95,224,255,.45), #5fe0ff); box-shadow:0 0 12px rgba(95,224,255,.6); transition:width .6s ease;"></div>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:12px;">AĞ TRAFİĞİ</div>
+        <div style="display:flex; align-items:flex-end; gap:3px; height:76px;">
+          <sc-for list="{{ netBars }}" as="b" hint-placeholder-count="28">
+            <div style="flex:1; height:{{ b.h }}%; background:linear-gradient(180deg, #5fe0ff, rgba(95,224,255,.12)); transition:height .45s ease;"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(160,215,240,.6);">
+          <span>↓ {{ down }} MB/s</span>
+          <span>↑ {{ up }} MB/s</span>
+          <span>PING {{ ping }}ms</span>
+        </div>
+      </section>
+
+      <section style="position:relative; padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:12px;">HAVA · İSTANBUL</div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:44px; color:#eaf9ff; line-height:1;">28°</div>
+          <div style="text-align:right; display:flex; flex-direction:column; gap:3px;">
+            <span style="font-size:15px; letter-spacing:.1em; color:#bfe8fa;">Parçalı Bulutlu</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(160,215,240,.55);">NEM %52 · RÜZGAR 11 km/s</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(160,215,240,.55);">HİSSEDİLEN 30° · UV 6</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+
+      <div style="position:relative; width:100%; aspect-ratio:1/1; max-height:430px; display:grid; place-items:center;">
+        <div style="position:absolute; width:100%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle, rgba(95,224,255,.10) 40%, rgba(95,224,255,.03) 62%, transparent 72%);"></div>
+        <div style="position:absolute; width:{{ ringOuter }}%; aspect-ratio:1/1; border-radius:50%; border:1px solid rgba(95,224,255,.35); border-style:dashed; animation:jspin 44s linear infinite;"></div>
+        <div style="position:absolute; width:82%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(95,224,255,.55); border-right-color:transparent; border-bottom-color:transparent; box-shadow:0 0 18px rgba(95,224,255,.25); animation:jspinrev 18s linear infinite;"></div>
+        <div style="position:absolute; width:70%; aspect-ratio:1/1; border-radius:50%; border:1px solid rgba(95,224,255,.35);"></div>
+        <div style="position:absolute; width:66%; aspect-ratio:1/1; border-radius:50%; border:3px solid rgba(95,224,255,.30); border-top-color:#7ff0ff; box-shadow:0 0 26px rgba(95,224,255,.35); animation:jspin 7s linear infinite;"></div>
+        <div style="position:absolute; width:{{ ringAmber }}%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(255,179,92,.55); border-left-color:transparent; animation:jspinrev 11s linear infinite; transition:width .09s linear;"></div>
+        <div style="position:absolute; width:{{ auraSize }}%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle, rgba(95,224,255,{{ auraAlpha }}) 0%, rgba(95,224,255,.06) 55%, transparent 72%); transition:width .09s linear;"></div>
+        <div style="position:absolute; width:{{ coreSize }}%; aspect-ratio:1/1; border-radius:50%; border:2px solid rgba(200,246,255,.9); background:radial-gradient(circle, #ffffff 0%, #d8f7ff 22%, #5fe0ff 55%, #1b6f96 82%, #0a3c55 100%); box-shadow:0 0 {{ coreGlow }}px 10px rgba(95,224,255,.55), inset 0 0 40px rgba(255,255,255,.45); transition:width .09s linear, box-shadow .09s linear;"></div>
+        <div style="position:relative; text-align:center; pointer-events:none;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500; letter-spacing:.3em; color:#04202e;">{{ coreState }}</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.24em; color:rgba(4,32,46,.65); margin-top:4px;">{{ coreLevel }}</div>
+        </div>
+        <div style="position:absolute; left:0; top:50%; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; color:rgba(160,215,240,.45);">SYNC 100%</div>
+        <div style="position:absolute; right:0; top:50%; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; color:rgba(160,215,240,.45);">LAT {{ ping }}ms</div>
+      </div>
+
+      <div style="width:100%; padding:16px 18px; border:1px solid rgba(95,224,255,.22); background:linear-gradient(180deg, rgba(10,34,56,.7), rgba(6,20,34,.55));">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">SESLİ KOMUT</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55);">{{ micLabel }}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div onClick="{{ toggleListen }}" style="flex-shrink:0; width:56px; height:56px; border-radius:50%; border:1px solid rgba(95,224,255,.45); display:grid; place-items:center; cursor:pointer; background:rgba(95,224,255,.08);" style-hover="background:rgba(95,224,255,.2); box-shadow:0 0 22px rgba(95,224,255,.35);">
+            <div style="width:14px; height:22px; border-radius:7px; border:2px solid #5fe0ff;"></div>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; gap:3px; height:56px;">
+            <sc-for list="{{ waveBars }}" as="w" hint-placeholder-count="40">
+              <div style="flex:1; height:{{ w.h }}%; min-height:2px; background:#5fe0ff; opacity:.85; border-radius:1px; transition:height .12s linear;"></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="margin-top:14px; padding:10px 12px; border-left:2px solid #5fe0ff; background:rgba(95,224,255,.06);">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#eaf9ff;">{{ transcript }}</div>
+        </div>
+      </div>
+
+      <div onClick="{{ briefMe }}" style="width:100%; padding:16px; text-align:center; cursor:pointer; border:1px solid rgba(95,224,255,.55); background:linear-gradient(180deg, rgba(95,224,255,.16), rgba(95,224,255,.05)); box-shadow:0 0 24px rgba(95,224,255,.18) inset;" style-hover="border-color:#7ff0ff; background:linear-gradient(180deg, rgba(95,224,255,.3), rgba(95,224,255,.1)); box-shadow:0 0 30px rgba(95,224,255,.35);">
+        <div style="font-size:19px; font-weight:700; letter-spacing:.4em; color:#eaf9ff; text-shadow:0 0 16px rgba(95,224,255,.5);">BRIEF ME</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.22em; color:rgba(160,215,240,.6); margin-top:5px;">{{ briefHint }}</div>
+      </div>
+
+      <div style="width:100%; display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+        <sc-for list="{{ quickCmds }}" as="q" hint-placeholder-count="4">
+          <div onClick="{{ q.run }}" style="padding:12px 8px; text-align:center; border:1px solid rgba(95,224,255,.22); background:rgba(10,32,52,.45); cursor:pointer;" style-hover="border-color:#5fe0ff; background:rgba(95,224,255,.12);">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#a8e2fa;">{{ q.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:18px;">
+
+      <section style="padding:16px; border:1px solid rgba(95,224,255,.2); background:linear-gradient(180deg, rgba(10,34,56,.62), rgba(6,20,34,.5));">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">BAĞLANTI DURUMLARI</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(160,215,240,.45);">{{ linkSummary }}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
+          <sc-for list="{{ links }}" as="k" hint-placeholder-count="5">
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid rgba(95,224,255,.12); background:rgba(6,22,38,.45);">
+              <div style="width:6px; height:6px; border-radius:50%; background:{{ k.dot }}; box-shadow:0 0 8px 2px {{ k.glow }}; flex-shrink:0;"></div>
+              <span style="flex:1; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; color:rgba(200,235,250,.85);">{{ k.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; color:{{ k.dot }};">{{ k.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5; margin-bottom:14px;">BUGÜNÜN AJANDASI</div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <sc-for list="{{ agenda }}" as="a" hint-placeholder-count="4">
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#5fe0ff; padding-top:2px; min-width:44px;">{{ a.time }}</span>
+              <div style="flex:1; display:flex; flex-direction:column; gap:2px; padding-left:12px; border-left:1px solid rgba(95,224,255,.2);">
+                <span style="font-size:14px; color:#d6f1ff; letter-spacing:.03em;">{{ a.title }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:rgba(160,215,240,.5);">{{ a.meta }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="padding:16px; border:1px solid rgba(255,179,92,.24); background:linear-gradient(180deg, rgba(44,30,12,.5), rgba(20,14,6,.4));">
+        <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#ffc689; margin-bottom:12px;">DİKKAT GEREKTİREN</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <sc-for list="{{ alerts }}" as="al" hint-placeholder-count="2">
+            <div style="display:flex; gap:10px; align-items:baseline;">
+              <span style="color:#ffb35c; font-family:'JetBrains Mono',monospace; font-size:11px;">!</span>
+              <span style="font-size:14px; color:#ffddb5; letter-spacing:.03em; line-height:1.35;">{{ al.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer style="position:relative; margin-top:18px; padding:11px 16px; border:1px solid rgba(95,224,255,.16); background:rgba(6,20,34,.6); display:flex; align-items:center; gap:16px;">
+    <span style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.22em; color:rgba(160,215,240,.5); flex-shrink:0;">SİSTEM KAYDI</span>
+    <div style="flex:1; display:flex; flex-direction:column; gap:3px; max-height:52px; overflow:hidden;">
+      <sc-for list="{{ logs }}" as="l" hint-placeholder-count="3">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; color:{{ l.color }};">{{ l.line }}</div>
+      </sc-for>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = {
+    now: new Date(),
+    cpu: 34, ram: 61, gpu: 22, temp: 48,
+    net: Array.from({length:28}, (_,i)=> 20 + Math.round(40*Math.abs(Math.sin(i/3)))),
+    wave: Array.from({length:40}, ()=> 8),
+    listening: false, level: 0.05,
+    transcript: "Hazırım. Bir komut bekliyorum.",
+    down: "4.2", up: "1.1", ping: 12,
+    devices: [
+      { name:"Çalışma Odası Işıkları", meta:"%68 PARLAKLIK · SICAK", on:true },
+      { name:"Klima", meta:"22°C · SESSİZ MOD", on:true },
+      { name:"Ön Kapı Kilidi", meta:"SON ERİŞİM 08:42", on:false },
+      { name:"Sunucu Rafı", meta:"3 SERVİS ÇALIŞIYOR", on:true },
+      { name:"Ambiyans Ses Sistemi", meta:"LO-FI · %30", on:false }
+    ],
+    logs: [
+      { line:"[08:42:11] biyometrik doğrulama başarılı — hoş geldin.", color:"rgba(160,215,240,.75)" },
+      { line:"[08:42:12] 14 cihaz keşfedildi, 3 tanesi otomatik eşleştirildi.", color:"rgba(160,215,240,.55)" },
+      { line:"[08:42:14] yedekleme tamamlandı — 42.8 GB şifrelendi.", color:"rgba(110,255,192,.7)" }
+    ]
+  };
+
+  componentDidMount() {
+    this.t1 = setInterval(()=> this.setState({ now:new Date() }), 1000);
+    this.t2 = setInterval(()=> {
+      const j = (v,a,lo,hi)=> Math.max(lo, Math.min(hi, Math.round(v + (Math.random()-.5)*a)));
+      this.setState(s => ({
+        cpu: j(s.cpu,10,8,92), ram: j(s.ram,5,40,88), gpu: j(s.gpu,14,4,80), temp: j(s.temp,3,38,72),
+        net: s.net.slice(1).concat(10 + Math.round(Math.random()*85)),
+        down: (2 + Math.random()*8).toFixed(1), up: (0.4 + Math.random()*2.4).toFixed(1),
+        ping: 8 + Math.round(Math.random()*14)
+      }));
+    }, 1400);
+    this.t3 = setInterval(()=> {
+      if (this.analyser) return;
+      const on = this.state.listening;
+      const lvl = on ? 0.25 + Math.random()*0.5 : 0.05;
+      this.setState({ level: lvl, wave: Array.from({length:40}, (_,i)=> {
+        if (!on) return 5 + Math.round(6*Math.abs(Math.sin(Date.now()/700 + i/4)));
+        const env = Math.sin((i/39)*Math.PI);
+        return 8 + Math.round(88 * env * (0.35 + Math.random()*0.65));
+      })});
+    }, 120);
+  }
+  componentWillUnmount(){
+    clearInterval(this.t1); clearInterval(this.t2); clearInterval(this.t3);
+    cancelAnimationFrame(this.raf); this.stopMic();
+  }
+
+  async startMic() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true } });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+      const an = ctx.createAnalyser();
+      an.fftSize = 128; an.smoothingTimeConstant = 0.72;
+      src.connect(an);
+      this.stream = stream; this.actx = ctx; this.analyser = an;
+      this.freq = new Uint8Array(an.frequencyBinCount);
+      this.pushLog("mikrofon dizisi bağlandı — canlı ses analizi aktif.", "#6effc0");
+      this.loop();
+    } catch (e) {
+      this.pushLog("mikrofon erişimi reddedildi — simülasyon moduna geçildi.", "#ffc689");
+    }
+  }
+  stopMic() {
+    if (this.stream) this.stream.getTracks().forEach(t=>t.stop());
+    if (this.actx) this.actx.close();
+    this.stream = null; this.actx = null; this.analyser = null;
+  }
+  loop = () => {
+    if (!this.analyser) return;
+    this.analyser.getByteFrequencyData(this.freq);
+    const n = 40, bins = this.freq.length, wave = [];
+    let sum = 0;
+    for (let i=0;i<n;i++) {
+      const v = this.freq[Math.floor(i/n*bins*0.7)] / 255;
+      sum += v;
+      wave.push(6 + Math.round(94 * Math.pow(v, 0.85)));
+    }
+    const level = Math.min(1, (sum/n) * 2.2);
+    this.setState({ wave, level });
+    this.raf = requestAnimationFrame(this.loop);
+  };
+
+  pushLog(line, color) {
+    const t = new Date().toLocaleTimeString('tr-TR', { hour12:false });
+    this.setState(s => ({ logs: s.logs.slice(-2).concat({ line:"["+t+"] "+line, color: color||"rgba(160,215,240,.75)" }) }));
+  }
+
+  toggleListen = () => {
+    const next = !this.state.listening;
+    this.setState({ listening: next, transcript: next ? "Dinliyorum…" : "Hazırım. Bir komut bekliyorum.", level: next ? this.state.level : 0.05 });
+    if (next) { this.startMic(); }
+    else { cancelAnimationFrame(this.raf); this.stopMic(); this.pushLog("mikrofon dizisi kapatıldı.", "#5fe0ff"); }
+  };
+
+  toggleDevice = (i) => {
+    this.setState(s => ({ devices: s.devices.map((d,k)=> k===i ? {...d, on:!d.on} : d) }));
+    const d = this.state.devices[i];
+    this.pushLog(d.name.toLowerCase() + (d.on ? " kapatıldı." : " açıldı."), d.on ? "rgba(160,215,240,.6)" : "rgba(110,255,192,.7)");
+  };
+
+  runCmd = (label, msg) => () => {
+    this.setState({ transcript: msg });
+    this.pushLog(label.toLowerCase() + " rutini yürütülüyor…", "#ffc689");
+  };
+
+  renderVals() {
+    const s = this.state;
+    const two = n => String(n).padStart(2,'0');
+    const d = s.now;
+    return {
+      clock: two(d.getHours())+":"+two(d.getMinutes())+":"+two(d.getSeconds()),
+      dateStr: d.toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }).toUpperCase(),
+      coreState: s.listening ? "DİNLİYOR" : "BEKLEMEDE",
+      coreSize: (34 + s.level * 16).toFixed(1),
+      coreGlow: Math.round(45 + s.level * 90),
+      auraSize: (52 + s.level * 30).toFixed(1),
+      auraAlpha: (0.16 + s.level * 0.34).toFixed(2),
+      ringAmber: (48 + s.level * 8).toFixed(1),
+      ringOuter: (94 + s.level * 5).toFixed(1),
+      coreLevel: "LVL " + String(Math.round(s.level * 100)).padStart(3, "0"),
+      micLabel: s.listening ? "KANAL AÇIK" : "SESSİZ",
+      transcript: s.transcript,
+      vitals: [
+        { label:"İŞLEMCİ", readout:s.cpu+"%", pct:s.cpu },
+        { label:"BELLEK", readout:s.ram+"%", pct:s.ram },
+        { label:"GRAFİK", readout:s.gpu+"%", pct:s.gpu },
+        { label:"ÇEKİRDEK ISISI", readout:s.temp+"°C", pct:Math.round(s.temp/90*100) }
+      ],
+      netBars: s.net.map(h=> ({ h })),
+      waveBars: s.wave.map(h=> ({ h })),
+      down:s.down, up:s.up, ping:s.ping,
+      devices: s.devices.map((dv,i)=> ({ ...dv, off: !dv.on, toggle: ()=> this.toggleDevice(i) })),
+      activeCount: s.devices.filter(dv=>dv.on).length,
+      agenda: [
+        { time:"09:30", title:"Ürün senkronizasyonu", meta:"4 KİŞİ · GÖRÜNTÜLÜ" },
+        { time:"11:00", title:"Derin çalışma bloğu", meta:"BİLDİRİMLER SUSTURULACAK" },
+        { time:"14:15", title:"Yatırımcı güncellemesi taslağı", meta:"SON TARİH BUGÜN" },
+        { time:"19:00", title:"Antrenman · üst vücut", meta:"SPOR SALONU" }
+      ],
+      alerts: [
+        { text:"Depolama %86 dolu — eski derlemeleri arşivle." },
+        { text:"İki abonelik 3 gün içinde yenilenecek." }
+      ],
+      links: [
+        { name:"UYDU BAĞI", status:"KİLİTLİ", dot:"#6effc0", glow:"rgba(110,255,192,.6)" },
+        { name:"YEREL AĞ", status:s.ping+"ms", dot:"#6effc0", glow:"rgba(110,255,192,.6)" },
+        { name:"BULUT ÇEKİRDEĞİ", status:"SENKRON", dot:"#5fe0ff", glow:"rgba(95,224,255,.6)" },
+        { name:"BİYOMETRİK", status:"DOĞRULANDI", dot:"#5fe0ff", glow:"rgba(95,224,255,.6)" },
+        { name:"DIŞ API AĞ GEÇİDİ", status:"KISITLI", dot:"#ffb35c", glow:"rgba(255,179,92,.55)" }
+      ],
+      linkSummary: "4/5 STABİL",
+      briefHint: s.briefed ? "BRİFİNG İLETİLDİ" : "GÜNLÜK ÖZETİ SESLİ AKTAR",
+      briefMe: () => {
+        this.setState({ briefed:true, transcript:"Günaydın. Bugün 4 etkinlik, 2 uyarı ve %86 dolu depolama var. Öncelik: yatırımcı güncellemesi." });
+        this.pushLog("brifing derlendi — 6 kaynak, 2.1 saniyede özetlendi.", "#6effc0");
+      },
+      quickCmds: [
+        { label:"ODAK MODU", run:this.runCmd("Odak modu","Odak modu etkin: bildirimler 90 dakika susturuldu.") },
+        { label:"BRİFİNG", run:this.runCmd("Brifing","Günlük brifing hazırlanıyor — 6 başlık derlendi.") },
+        { label:"YEDEKLE", run:this.runCmd("Yedekleme","Artımlı yedekleme başladı — tahmini 4 dakika.") },
+        { label:"KİLİTLE", run:this.runCmd("Kilitleme","Ev güvenlik moduna alınıyor. İyi geceler.") }
+      ],
+      logs: s.logs
+    };
+  }
+}
+</script>
+</body>
+</html>

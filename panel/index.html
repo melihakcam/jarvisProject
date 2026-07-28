@@ -671,7 +671,7 @@
   // otomatik olarak asagidaki Whisper yoluna dusuyoruz.
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var webSpeechVar = !!SR;
-  var tanima = null, tanimaAktif = false, sonMetin = "";
+  var tanima = null, tanimaAktif = false, sonMetin = "", birikmis = "", basiliTutuluyor = false;
 
   function _metniGonder(metin) {
     pushLog("sen: " + metin, "#a8e2fa");
@@ -698,32 +698,42 @@
     var r = new SR();
     r.lang = "tr-TR";
     r.interimResults = true;
-    r.continuous = false;
+    r.continuous = true;          // duraklamada KESME; kullanici birakana kadar dinle
     r.maxAlternatives = 1;
     r.onresult = function (e) {
       var t = "";
       for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-      sonMetin = t.trim();
+      // birikmis: onceki oturumlardan (arada kesildiyse) gelen metin
+      sonMetin = (birikmis + " " + t).trim();
       $("transcript").textContent = sonMetin ? ("… " + sonMetin) : "Dinliyorum…";
     };
     r.onerror = function (e) {
-      tanimaAktif = false; state.listening = false; updateCore();
       var hata = e && e.error;
       if (hata === "not-allowed" || hata === "service-not-allowed") {
+        basiliTutuluyor = false; tanimaAktif = false; state.listening = false; updateCore();
         var m = "Mikrofona erişemedim efendim, lütfen izin verin.";
         $("transcript").textContent = m; pushLog("mikrofon izni yok.", "#ffb35c"); speak(m);
       } else if (hata === "no-speech" || hata === "aborted") {
-        $("transcript").textContent = "Emrinizi bekliyorum efendim.";
+        // gecici: kullanici hala basili tutuyorsa onend yeniden baslatir. bir sey yapma.
       } else {
         // ag/servis yok (ornegin WebView2) -> yedek Whisper yoluna kalici gec
-        webSpeechVar = false;
+        webSpeechVar = false; basiliTutuluyor = false; tanimaAktif = false;
+        state.listening = false; updateCore();
         pushLog("tarayıcı ses tanıma yok, yedek motora geçildi.", "#ffb35c");
         $("transcript").textContent = "Ses motoru değişti efendim, tekrar deneyin.";
       }
     };
     r.onend = function () {
+      // Kullanici HALA basili tutuyor ama motor kendiliginden bitti -> kaldigi
+      // yerden devam et (uzun cumleler yarida kesilmesin).
+      if (basiliTutuluyor && webSpeechVar) {
+        birikmis = sonMetin;               // su ana kadarki tam metni koru
+        try { tanima = _tanimaKur(); tanimaAktif = true; tanima.start(); return; }
+        catch (e) { /* devam edemedik -> asagida gonder */ }
+      }
       tanimaAktif = false; state.listening = false; updateCore();
-      var metin = (sonMetin || "").trim(); sonMetin = "";
+      var metin = (sonMetin || "").trim();
+      sonMetin = ""; birikmis = "";
       if (metin) _metniGonder(metin);
     };
     return r;
@@ -733,22 +743,23 @@
     if (!webSpeechVar) { backendBaslat(); return; }
     if (tanimaAktif) return;
     try {
+      sonMetin = ""; birikmis = ""; basiliTutuluyor = true;
       tanima = _tanimaKur();
-      sonMetin = "";
       tanimaAktif = true;
       state.listening = true;
       $("transcript").textContent = "Dinliyorum…";
       updateCore();
       tanima.start();
     } catch (e) {
-      tanimaAktif = false; webSpeechVar = false; backendBaslat();
+      tanimaAktif = false; basiliTutuluyor = false; webSpeechVar = false; backendBaslat();
     }
   }
 
   function sesBitir() {
     if (!webSpeechVar) { backendBitir(); return; }
-    if (!tanimaAktif || !tanima) return;
-    try { tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
+    if (!tanimaAktif && !basiliTutuluyor) return;
+    basiliTutuluyor = false;               // artik onend metni gonderecek
+    try { if (tanima) tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
   }
 
   function backendBaslat() {

@@ -95,6 +95,9 @@ def dusun(soru: str, gecmis_metni: str = None) -> str:
     komut = [
         _claude_yolu(),
         "-p", istem,
+        "--model", config.BEYIN_MODEL,      # hiz icin hizli model (varsayilan: haiku)
+        # MCP sunucularini yukleme (beyin kullanmiyor) -> her cagride ~birkac sn hizlanma
+        "--strict-mcp-config",
         "--append-system-prompt", _SES_TALIMATI,
         "--allowedTools", *_ARACLAR,
         # Basli (headless) modda araclari onay beklemeden calistirabilsin diye.

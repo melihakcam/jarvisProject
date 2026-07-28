@@ -35,6 +35,9 @@ TTS_SES_TERCIHI = "Tolga"
 # --- Beyin (Claude Code) ---
 CLAUDE_KOMUTU = "claude"      # PATH'te 'claude' calisabilir olmali
 BEYIN_ZAMAN_ASIMI = 180       # saniye (bilgisayarda islem yapan gorevler daha uzun surebilir)
+# Beyin modeli: sesli asistan icin HIZ onemli. "haiku" en hizlisi (onerilen).
+#   Daha akilli ama yavas isterseniz: "sonnet" ya da "opus".
+BEYIN_MODEL = "haiku"
 
 # --- Hafiza (konusma gecmisi) ---
 # Tum konusmalar bu JSON dosyasina adim adim (kim ne dedi) kaydedilir.

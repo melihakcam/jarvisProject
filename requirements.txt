@@ -10,3 +10,4 @@ flask                 # Panel sunucusu
 keyboard==0.13.5      # Push-to-talk (terminal modu)
 pywebview             # Native masaustu penceresi (paneli tarayicisiz gosterir)
 psutil                # Panel telemetrisi (islemci, bellek, disk, ag, batarya)
+youtube-transcript-api # YouTube video ozetleme icin transkript indirme (ucretsiz)

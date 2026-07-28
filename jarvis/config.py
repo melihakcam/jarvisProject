@@ -33,11 +33,37 @@ TTS_SES_SEVIYESI = 1.0        # 0.0 - 1.0
 TTS_SES_TERCIHI = "Tolga"
 
 # --- Beyin (Claude Code) ---
-CLAUDE_KOMUTU = "claude"      # PATH'te 'claude' calisabilir olmali
+CLAUDE_KOMUTU = "claude"      # once PATH'te aranir
+# PATH'te bulunamazsa buradaki klasorlerde claude.exe aranir (en yeni surum
+# secilir). Claude masaustu uygulamasi CLI'yi buraya kurar ama PATH'e eklemez.
+CLAUDE_ARAMA_KLASORLERI = [
+    Path.home() / "AppData" / "Roaming" / "Claude" / "claude-code",
+    Path.home() / ".claude" / "local",
+]
 BEYIN_ZAMAN_ASIMI = 180       # saniye (bilgisayarda islem yapan gorevler daha uzun surebilir)
 # Beyin modeli: sesli asistan icin HIZ onemli. "haiku" en hizlisi (onerilen).
 #   Daha akilli ama yavas isterseniz: "sonnet" ya da "opus".
 BEYIN_MODEL = "haiku"
+
+# --- MCP baglantilari (Gmail, Takvim vb.) ---
+# MCP sunuculari her cagride yeniden yuklenir ve bu birkac saniye ekler. Sesli
+# asistanda bu gecikme rahatsiz edicidir; bu yuzden MCP SADECE ihtiyac duyulan
+# sorularda acilir. Asagidaki kelimelerden biri soruda geciyorsa MCP yuklenir,
+# gecmiyorsa hizli yol (MCP'siz) kullanilir.
+# Google kimlik bilgileri (.gauth.json) kurulana kadar KAPALI. Kurulum
+# tamamlaninca True yapmak yeterlidir; kalan her sey hazir.
+MCP_ACIK = False
+# .mcp.json icinde tanimli sunucularin arac on ekleri. MCP araclari da izinli
+# arac listesine eklenmezse beyin onlari goremez, bu yuzden burada sayilirlar.
+MCP_ARACLARI = ("mcp__google-calendar",)
+MCP_ANAHTAR_KELIMELER = (
+    # e-posta
+    "mail", "e posta", "eposta", "gmail", "posta kutusu", "gelen kutusu",
+    # takvim / ajanda
+    "takvim", "toplanti", "randevu", "etkinlik", "davet", "musait",
+    # ingilizce
+    "email", "calendar", "meeting", "appointment", "schedule",
+)
 
 # --- Hafiza (konusma gecmisi) ---
 # Tum konusmalar bu JSON dosyasina adim adim (kim ne dedi) kaydedilir.

@@ -42,6 +42,8 @@ tutar (`D:\jarvis-env`, `D:\jarvis-cache`); C: sürücüsüne hiçbir şey yazı
 
 - **Konuşmak için:** Panel açıkken **mikrofon butonuna basılı tutun** (veya
   **BOŞLUK tuşuna** basılı tutun), konuşun, bırakın.
+- **Yazmak için:** Mikrofonun altındaki metin kutusuna komut yazıp Enter'a basın.
+  Sesle söylenmesi zor şeyler (örn. YouTube linki) için bunu kullanın.
 - JARVIS panelde yazıyla gösterir **ve sesli cevap verir**.
 - Hatırlatıcı/ajanda panelde canlı görünür; kayıtlar `data/ajanda.json`
   dosyasında tutulur (panelden veya sesle düzenlenir).
@@ -70,6 +72,9 @@ otomatik olarak beyne (Claude) sorulur ve akıllıca cevaplanır.
 | "pencereleri küçült", "masaüstünü göster", "tam ekran" | Pencere yönetimi |
 | "bilgisayarı kilitle" | Ekranı kilitler |
 | "15:30'da toplantı hatırlat", "20 dakika sonra çayı al hatırlat" | Ajandaya kayıt ekler, zamanı gelince sesli hatırlatır |
+| "masaüstünü düzenle", "indirilenler klasörünü düzenle" | Klasördeki dosyaları türüne göre alt klasörlere ayırır (Resimler, Belgeler, Videolar...) |
+| YouTube linki + "özetle" | Videonun transkriptini indirip özetler (panelin metin kutusuna linki yapıştırın; internet ve Claude gerekir) |
+| "bana bir Word raporu hazırla", "şu tabloyu Excel yap" gibi belge istekleri | JARVIS (Claude beyni), docx/pdf/pptx/xlsx skillerini kullanarak dosyayı oluşturup Masaüstüne kaydeder |
 | Bunların dışında her soru | JARVIS (Claude beyni) cevaplar |
 
 Yeni komut eklemek/değiştirmek için: `jarvis/commands.py`.
@@ -100,6 +105,58 @@ Hızlı komut butonları da gerçek işlem yapar:
 
 İlgili modüller: `jarvis/telemetry.py`, `jarvis/weather.py`, `jarvis/ajanda.py`,
 `jarvis/eylemler.py`.
+
+## 🔌 MCP Bağlantıları (Google Takvim)
+
+JARVIS, takviminize MCP üzerinden erişebilir: "yarın toplantım var mı",
+"salı 15:00'e diş randevusu ekle" gibi komutlar.
+
+**Hız notu:** MCP sunucuları her çağrıda yeniden yüklenir ve bu birkaç saniye
+ekler. Bu yüzden MCP **sadece gerektiğinde** açılır — soruda "takvim",
+"toplantı", "randevu", "mail" gibi bir kelime geçmiyorsa hızlı yol kullanılır.
+Bu kelimeler `jarvis/config.py` içindeki `MCP_ANAHTAR_KELIMELER` listesinden
+düzenlenebilir; `MCP_ACIK = False` ile MCP tamamen kapatılabilir.
+
+### Kurulum (tek seferlik, ~10 dakika)
+
+1. <https://console.cloud.google.com> adresinde bir proje oluşturun.
+2. **Google Calendar API**'yi etkinleştirin.
+3. *Kimlik Bilgileri* → *Kimlik Bilgisi Oluştur* → *OAuth istemci kimliği*:
+   - Uygulama türü: **Desktop app** (masaüstü uygulaması) — bu önemli
+4. Kapsam (scope) olarak şunları ekleyin:
+   `https://www.googleapis.com/auth/calendar` ve
+   `https://www.googleapis.com/auth/calendar.events`
+5. *Hedef Kitle* ekranında kendi e-posta adresinizi **test kullanıcısı** olarak ekleyin.
+6. İndirdiğiniz JSON dosyasını proje köküne **`.gauth.json`** adıyla kaydedin
+   (biçim için `.gauth.ornek.json` dosyasına bakın).
+7. Yetkilendirmeyi başlatın — tarayıcı açılır, Google hesabınızla izin verirsiniz:
+   ```bash
+   npx @cocal/google-calendar-mcp auth
+   ```
+8. Proje MCP sunucusunu **bir kez onaylayın**: proje klasöründe `claude` komutunu
+   çalıştırıp çıkan onay sorusuna olur verin. Onaylanmadan sunucu "pending
+   approval" durumunda kalır ve beyin araçları göremez.
+
+> **Not:** Claude uygulamasında hesabınıza bağlı "claude.ai Gmail / Google
+> Calendar" bağlayıcıları görünebilir. Bunlar yalnızca uygulama içi oturumda
+> çalışır; JARVIS'in kullandığı başlıksız (`claude -p`) çağrılara araç olarak
+> açılmazlar. Bu yüzden yukarıdaki proje sunucusu kurulumu gereklidir.
+
+> ⚠️ **Güvenlik:** `.gauth.json` ve üretilen jeton dosyaları takviminize erişim
+> verir. Bunlar `.gitignore`'da tanımlıdır ve **asla depoya gönderilmemelidir**.
+
+### Neden sadece Takvim, Gmail yok?
+
+Gmail + Takvim'i birlikte sunan `mcp-google-workspace` npm paketi incelendiğinde,
+işaret ettiği kaynak deposunun (`VSF-TTS/AI-Platform-A`) **erişilemez (404)**
+olduğu görüldü; yayıncısı, dokümantasyonunu okuduğumuz açık kaynak projeyle
+(`j3k0/mcp-google-workspace`) aynı değil. Gmail bağlantısı `https://mail.google.com/`
+kapsamı ister — yani **tüm e-postaları okuma, gönderme ve silme** yetkisi. Kaynağı
+doğrulanamayan bir pakete bu yetki verilmedi.
+
+Gmail'i yine de bağlamak isterseniz güvenli yol, `j3k0/mcp-google-workspace`
+deposunu **kaynaktan kurmaktır** (klonlayıp `npm install && npm run build`),
+npm'deki aynı adlı paketi kullanmak değil.
 
 ## Bileşenleri tek tek test etme
 

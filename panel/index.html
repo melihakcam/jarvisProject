@@ -133,6 +133,11 @@
         <div style="margin-top:14px; padding:10px 12px; border-left:2px solid #5fe0ff; background:rgba(95,224,255,.06);">
           <div class="mono" id="transcript" style="font-size:12px; color:#eaf9ff;">Hazırım. Bir komut bekliyorum.</div>
         </div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <input id="textCmd" type="text" placeholder="Komut yazın veya video linki yapıştırıp 'özetle' yazın"
+                 class="mono agin" style="flex:1; font-size:11px;" />
+          <div id="textCmdBtn" class="hoverbtn mono" style="padding:0 14px; display:grid; place-items:center; cursor:pointer; font-size:11px; letter-spacing:.14em; color:#eaf9ff; border:1px solid rgba(95,224,255,.45); background:rgba(95,224,255,.08);">GÖNDER</div>
+        </div>
       </div>
 
       <!-- BRIEF ME -->
@@ -817,13 +822,32 @@
       document.addEventListener("mouseup", sesBitir);
       mic.addEventListener("touchstart", function (e) { e.preventDefault(); sesBaslat(); }, { passive: false });
       document.addEventListener("touchend", function () { sesBitir(); });
+      // Metin kutusuna yazarken BOŞLUK mikrofonu tetiklememeli
+      var yaziyor = function (e) {
+        var el = e.target;
+        return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      };
       document.addEventListener("keydown", function (e) {
+        if (yaziyor(e)) return;
         if (e.code === "Space" && !e.repeat) { e.preventDefault(); sesBaslat(); }
       });
       document.addEventListener("keyup", function (e) {
+        if (yaziyor(e)) return;
         if (e.code === "Space") { e.preventDefault(); sesBitir(); }
       });
       $("micLabel").textContent = "BASILI TUT · KONUŞ";
+
+      var kutu = $("textCmd");
+      var gonder = function () {
+        var metin = kutu.value.trim();
+        if (!metin) return;
+        kutu.value = "";
+        _metniGonder(metin);
+      };
+      $("textCmdBtn").addEventListener("click", gonder);
+      kutu.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); gonder(); }
+      });
     } else {
       // file:// ile açıldıysa: sadece yerel görsel (eski davranış)
       mic.addEventListener("click", toggleListen);

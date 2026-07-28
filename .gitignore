@@ -15,3 +15,12 @@ data/
 
 # Yedek arsivleri
 *.zip
+
+# --- MCP / Google kimlik bilgileri (ASLA depoya girmemeli) ---
+# .gauth.json  : OAuth istemci kimligi ve GIZLI ANAHTAR
+# .accounts.json: hesap e-posta adresleri
+# .oauth2.*.json: uretilen erisim/yenileme jetonlari (Gmail'e tam erisim verir)
+.gauth.json
+.accounts.json
+.oauth2*.json
+.credentials/

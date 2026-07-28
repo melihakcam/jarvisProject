@@ -79,7 +79,10 @@ yapay zekâ API'si satın almana gerek yoktur; mevcut Claude aboneliğin kullan�
 5. ✅ **Ana döngü** — tuşa bas → konuş → sesli cevap
 6. ✅ **Yerel komutlar** — uygulama açma/kapama, dosya bulma, arama, ses/medya, pencere
 7. ✅ **Gösterge paneli** — sinematik JARVIS arayüzü (canlı saat + hatırlatıcılar)
-8. ⬜ **MCP bağlantıları** (sıradaki) — sen verince eklenecek (Gmail, Notion vb.)
+8. 🔶 **MCP bağlantıları** — altyapı hazır: MCP yalnızca e-posta/takvim konulu
+   sorularda açılır (hız kaybı olmasın diye). Google Takvim tanımlı; kullanmak
+   için OAuth kurulumu gerekir (bkz. `README.md`). Gmail, güvenilir bir paket
+   bulunamadığı için henüz bağlanmadı.
 
 ## 🔒 Güvenlik İlkesi
 

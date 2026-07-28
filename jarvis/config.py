@@ -72,6 +72,13 @@ KONUSMA_GECMISI_YOLU = VERI_KLASORU / "konusmalar.json"
 # hafiza demektir ama beynin cevap suresini uzatabilir.
 HAFIZA_BAGLAM_ADEDI = 10
 
+# --- Masaustu uygulamasi ---
+# True yapilirsa uygulama her acilista kendini yonetici olarak yeniden baslatir
+# ve Windows UAC onay penceresi cikar. Mevcut ozelliklerin hicbiri yonetici
+# yetkisi gerektirmiyor (odak modu yalnizca HKEY_CURRENT_USER'a yazar), bu
+# yuzden varsayilan KAPALI - uygulama tek tikla, onay istemeden acilir.
+MASAUSTU_YONETICI = False
+
 # --- Genel ---
 VARSAYILAN_DIL = "tr"         # "tr" veya "en"
 UYANMA_MESAJI = "Sistemler cevrimici efendim. Emrinizi bekliyorum."

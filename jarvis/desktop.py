@@ -3,10 +3,12 @@
 Mevcut sinematik paneli GERCEK bir Edge (ya da Chrome) uygulama-penceresinde acar
 (sekmesiz, adres cubuksuz, kendi simgesi). Boylece tarayicinin cevrimici ses
 tanima motoru (Web Speech API) calisir: dogru, bedava, RAM'siz Turkce STT.
-Uygulama acilirken kendini YONETICI (admin) olarak yeniden baslatir.
+Varsayilan olarak normal kullanici yetkisiyle acilir (UAC onayi CIKMAZ); mevcut
+ozelliklerin hicbiri yonetici yetkisi gerektirmez. Gerekirse config.py icinde
+MASAUSTU_YONETICI = True yapilarak yonetici modu acilabilir.
 
 Sira:
-    1) Yonetici degilse -> kendini yonetici olarak yeniden baslat (UAC) ve cik.
+    1) Yonetici modu acikken yonetici degilse -> yukselt (UAC) ve cik.
     2) 5000 portunu bosalt (takili eski surec varsa kapat).
     3) Flask panel sunucusunu arka planda baslat.
     4) Sunucu hazir olana kadar bekle (/health).
@@ -215,8 +217,10 @@ def _pywebview_ac() -> None:
 # Giris noktasi
 # --------------------------------------------------------------------------
 def main() -> None:
-    # 1) Yonetici degilsek kendimizi yukseltip cikalim.
-    if not _yonetici_mi():
+    # 1) Yonetici modu istendiyse ve henuz degilsek kendimizi yukseltip cikalim.
+    #    Varsayilan kapali: hicbir ozellik admin gerektirmiyor, UAC onayi
+    #    her aciliste gereksiz onay penceresi cikariyordu (bkz. config.MASAUSTU_YONETICI).
+    if getattr(config, "MASAUSTU_YONETICI", False) and not _yonetici_mi():
         _yonetici_olarak_yeniden_baslat()
         return
 

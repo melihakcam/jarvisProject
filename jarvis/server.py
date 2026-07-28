@@ -19,9 +19,9 @@ import threading
 from flask import Flask, jsonify, request, send_from_directory
 
 try:
-    from jarvis import config, stt, tts, brain, commands
+    from jarvis import config, stt, tts, brain, commands, memory
 except ImportError:
-    import config, stt, tts, brain, commands
+    import config, stt, tts, brain, commands, memory
 
 import os
 import sys
@@ -65,12 +65,17 @@ def _model_al():
 
 
 def _yanit_uret(heard: str):
-    """Duyulan metni komut/beyin ile isleyip cevap ve kaynak dondurur."""
+    """Duyulan metni komut/beyin ile isleyip cevap ve kaynak dondurur.
+
+    Beyne son konusmalari baglam olarak verir ve turu hafizaya kaydeder.
+    """
     cevap = commands.calistir(heard)
     kaynak = "komut"
     if cevap is None:
-        cevap = brain.dusun(heard)
+        baglam = memory.son_baglam(config.HAFIZA_BAGLAM_ADEDI)
+        cevap = brain.dusun(heard, baglam)
         kaynak = "beyin"
+    memory.tur_kaydet(heard, cevap)
     return cevap, kaynak
 
 
@@ -129,13 +134,8 @@ def listen_stop():
         return jsonify(ok=True, heard="", answer="Sizi duyamadim efendim, tekrar eder misiniz?",
                        source="bos")
 
-    # 1) Yerel komut mu?
-    cevap = commands.calistir(heard)
-    kaynak = "komut"
-    # 2) Degilse beyne sor
-    if cevap is None:
-        cevap = brain.dusun(heard)
-        kaynak = "beyin"
+    # Komut/beyin isle + hafizaya kaydet (tek yerden)
+    cevap, kaynak = _yanit_uret(heard)
 
     # Seslendirmeyi panel (tarayici) yapar; boylece sunucu sorunlarinda bile
     # hata mesajlari sesli duyulabilir ve mikrofon cakismasi olmaz.
@@ -162,6 +162,22 @@ def transcribe():
                        source="bos")
     cevap, kaynak = _yanit_uret(heard)
     return jsonify(ok=True, heard=heard, answer=cevap, source=kaynak)
+
+
+@app.route("/ask", methods=["POST"])
+def ask():
+    """Tarayicinin (Web Speech API) yaziya doktugu metni alir, komut/beyin ile isler.
+
+    Yerel Whisper yerine tarayicinin cevrimici ses tanima motoru kullanildiginda
+    STT tarayicida yapilir; buraya sadece cozulmus METIN gelir.
+    """
+    data = request.get_json(silent=True) or {}
+    metin = (data.get("text") or "").strip()
+    if not metin:
+        return jsonify(ok=True, heard="", answer="Sizi duyamadim efendim, tekrar eder misiniz?",
+                       source="bos")
+    cevap, kaynak = _yanit_uret(metin)
+    return jsonify(ok=True, heard=metin, answer=cevap, source=kaynak)
 
 
 @app.route("/say", methods=["POST"])

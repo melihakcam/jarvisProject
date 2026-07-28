@@ -9,3 +9,6 @@ venv/
 
 # Vosk konusma modeli (buyuk, ayrica indirilir)
 models/
+
+# Konusma gecmisi / hafiza (kisisel veri)
+data/

@@ -482,70 +482,203 @@
 
   function ensureStream() {
     if (mediaStream) return Promise.resolve(mediaStream);
-    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
-      .then(function (s) { mediaStream = s; return s; });
+    // Tek kanal + otomatik ses kazanci: kisik mikrofonu guclendirir, Whisper daha iyi anlar.
+    return navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    }).then(function (s) { mediaStream = s; return s; });
   }
 
-  function backendBaslat() {
-    if (kayitAktif) return;
-    ensureStream().then(function (s) {
-      kayitAktif = true;
+  // Desteklenen en iyi kayit ayarini secer (opus + yuksek bit hizi -> daha az sikistirma).
+  function _kayitSecenek() {
+    try {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported &&
+          MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        return { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 128000 };
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  // Durum makinesi: "idle" -> "arming" (mikrofon aciliyor) -> "active" (kayitta)
+  // Bu, "bas-birak" hizli yapildiginda olusan yaris (race) hatasini onler:
+  //  - arming sirasinda birakilirsa kayit hic baslamaz, temiz iptal olur.
+  //  - active degilken birakma yok sayilir.
+  var micDurum = "idle";
+  var birakmaBekliyor = false;
+
+  function _kaydiGonder() {
+    var blob = new Blob(audioChunks, { type: "audio/webm" });
+    if (!blob.size) { $("transcript").textContent = "Sizi duyamadım efendim."; return; }
+    var fd = new FormData();
+    fd.append("audio", blob, "ses.webm");
+    fetch("/transcribe", { method: "POST", body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.heard) pushLog("sen: " + d.heard, "#a8e2fa");
+        var cevap = d.answer || "Bir cevap alamadım efendim.";
+        $("transcript").textContent = cevap;
+        if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
+        speak(cevap);
+      })
+      .catch(function () {
+        var msg = "Sunucuya ulaşılamadı efendim. Lütfen JARVIS'i yeniden başlatın.";
+        $("transcript").textContent = msg;
+        pushLog("sunucuya ulaşılamadı.", "#ffb35c");
+        speak(msg);
+      });
+  }
+
+  // ---- TERCIH EDILEN STT: Tarayici ses tanima motoru (Web Speech API) ----
+  // Cevrimici, RAM'siz, Turkce'de yerel Whisper'dan cok daha isabetli. Gercek
+  // tarayicida (Edge/Chrome) kesin calisir; WebView2'de yoksa/hata verirse
+  // otomatik olarak asagidaki Whisper yoluna dusuyoruz.
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var webSpeechVar = !!SR;
+  var tanima = null, tanimaAktif = false, sonMetin = "";
+
+  function _metniGonder(metin) {
+    pushLog("sen: " + metin, "#a8e2fa");
+    $("transcript").textContent = "İşleniyor…";
+    fetch("/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: metin })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var cevap = d.answer || "Bir cevap alamadım efendim.";
+        $("transcript").textContent = cevap;
+        if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
+        speak(cevap);
+      })
+      .catch(function () {
+        var msg = "Sunucuya ulaşılamadı efendim.";
+        $("transcript").textContent = msg; pushLog("sunucuya ulaşılamadı.", "#ffb35c"); speak(msg);
+      });
+  }
+
+  function _tanimaKur() {
+    var r = new SR();
+    r.lang = "tr-TR";
+    r.interimResults = true;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+    r.onresult = function (e) {
+      var t = "";
+      for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      sonMetin = t.trim();
+      $("transcript").textContent = sonMetin ? ("… " + sonMetin) : "Dinliyorum…";
+    };
+    r.onerror = function (e) {
+      tanimaAktif = false; state.listening = false; updateCore();
+      var hata = e && e.error;
+      if (hata === "not-allowed" || hata === "service-not-allowed") {
+        var m = "Mikrofona erişemedim efendim, lütfen izin verin.";
+        $("transcript").textContent = m; pushLog("mikrofon izni yok.", "#ffb35c"); speak(m);
+      } else if (hata === "no-speech" || hata === "aborted") {
+        $("transcript").textContent = "Emrinizi bekliyorum efendim.";
+      } else {
+        // ag/servis yok (ornegin WebView2) -> yedek Whisper yoluna kalici gec
+        webSpeechVar = false;
+        pushLog("tarayıcı ses tanıma yok, yedek motora geçildi.", "#ffb35c");
+        $("transcript").textContent = "Ses motoru değişti efendim, tekrar deneyin.";
+      }
+    };
+    r.onend = function () {
+      tanimaAktif = false; state.listening = false; updateCore();
+      var metin = (sonMetin || "").trim(); sonMetin = "";
+      if (metin) _metniGonder(metin);
+    };
+    return r;
+  }
+
+  function sesBaslat() {
+    if (!webSpeechVar) { backendBaslat(); return; }
+    if (tanimaAktif) return;
+    try {
+      tanima = _tanimaKur();
+      sonMetin = "";
+      tanimaAktif = true;
       state.listening = true;
       $("transcript").textContent = "Dinliyorum…";
       updateCore();
+      tanima.start();
+    } catch (e) {
+      tanimaAktif = false; webSpeechVar = false; backendBaslat();
+    }
+  }
+
+  function sesBitir() {
+    if (!webSpeechVar) { backendBitir(); return; }
+    if (!tanimaAktif || !tanima) return;
+    try { tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
+  }
+
+  function backendBaslat() {
+    if (micDurum !== "idle") return;   // zaten kayitta/aciliyor
+    micDurum = "arming";
+    birakmaBekliyor = false;
+    state.listening = true;
+    $("transcript").textContent = "Dinliyorum…";
+    updateCore();
+    ensureStream().then(function (s) {
+      if (birakmaBekliyor) {           // biz hazir olmadan birakildi -> temiz iptal
+        micDurum = "idle";
+        birakmaBekliyor = false;
+        state.listening = false;
+        updateCore();
+        $("transcript").textContent = "Emrinizi bekliyorum efendim.";
+        return;
+      }
       audioChunks = [];
-      mediaRecorder = new MediaRecorder(s);
+      try { mediaRecorder = new MediaRecorder(s, _kayitSecenek()); }
+      catch (e) { mediaRecorder = new MediaRecorder(s); }
       mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstop = _kaydiGonder;
       mediaRecorder.start();
+      micDurum = "active";
     }).catch(function () {
-      var m = "Mikrofona erişemedim efendim, lütfen tarayıcıda izin verin.";
+      micDurum = "idle";
+      state.listening = false;
+      updateCore();
+      var m = "Mikrofona erişemedim efendim, lütfen izin verin.";
       $("transcript").textContent = m; pushLog("mikrofon izni yok.", "#ffb35c"); speak(m);
     });
   }
 
   function backendBitir() {
-    if (!kayitAktif || !mediaRecorder) return;
-    kayitAktif = false;
+    if (micDurum === "idle") return;
+    if (micDurum === "arming") {        // akis daha acilirken birakildi -> baslayinca iptal et
+      birakmaBekliyor = true;
+      return;
+    }
+    // micDurum === "active"
+    micDurum = "idle";
     state.listening = false;
     updateCore();
     $("transcript").textContent = "İşleniyor…";
-    mediaRecorder.onstop = function () {
-      var blob = new Blob(audioChunks, { type: "audio/webm" });
-      if (!blob.size) { $("transcript").textContent = "Sizi duyamadım efendim."; return; }
-      var fd = new FormData();
-      fd.append("audio", blob, "ses.webm");
-      fetch("/transcribe", { method: "POST", body: fd })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.heard) pushLog("sen: " + d.heard, "#a8e2fa");
-          var cevap = d.answer || "Bir cevap alamadım efendim.";
-          $("transcript").textContent = cevap;
-          if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
-          speak(cevap);
-        })
-        .catch(function () {
-          var msg = "Sunucuya ulaşılamadı efendim. Lütfen JARVIS'i yeniden başlatın.";
-          $("transcript").textContent = msg;
-          pushLog("sunucuya ulaşılamadı.", "#ffb35c");
-          speak(msg);
-        });
-    };
-    mediaRecorder.stop();
+    try { mediaRecorder.stop(); } catch (e) {}   // -> onstop -> _kaydiGonder
   }
 
   function wireMic() {
     var mic = $("micBtn");
     if (BACKEND) {
-      // Panelin mic butonuna BASILI TUT (mouse) veya BOŞLUK tuşuna basılı tut
-      mic.addEventListener("mousedown", backendBaslat);
-      document.addEventListener("mouseup", backendBitir);
-      mic.addEventListener("touchstart", function (e) { e.preventDefault(); backendBaslat(); }, { passive: false });
-      document.addEventListener("touchend", function () { backendBitir(); });
+      // Panelin mic butonuna BASILI TUT (mouse) veya BOŞLUK tuşuna basılı tut.
+      // sesBaslat/sesBitir once tarayici ses tanimayi dener, yoksa Whisper'a duser.
+      mic.addEventListener("mousedown", sesBaslat);
+      document.addEventListener("mouseup", sesBitir);
+      mic.addEventListener("touchstart", function (e) { e.preventDefault(); sesBaslat(); }, { passive: false });
+      document.addEventListener("touchend", function () { sesBitir(); });
       document.addEventListener("keydown", function (e) {
-        if (e.code === "Space" && !e.repeat) { e.preventDefault(); backendBaslat(); }
+        if (e.code === "Space" && !e.repeat) { e.preventDefault(); sesBaslat(); }
       });
       document.addEventListener("keyup", function (e) {
-        if (e.code === "Space") { e.preventDefault(); backendBitir(); }
+        if (e.code === "Space") { e.preventDefault(); sesBitir(); }
       });
       $("micLabel").textContent = "BASILI TUT · KONUŞ";
     } else {

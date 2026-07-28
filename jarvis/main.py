@@ -15,10 +15,10 @@ import sys
 # Hem "python jarvis/main.py" hem "python -m jarvis.main" ile calissin
 try:
     from jarvis import config, stt, tts, brain
-    from jarvis import commands
+    from jarvis import commands, memory
 except ImportError:
     import config, stt, tts, brain
-    import commands
+    import commands, memory
 
 # Sesli cikis komutlari
 CIKIS_KELIMELERI = ("kapan", "kapat kendini", "kendini kapat", "gorusuruz jarvis",
@@ -57,13 +57,17 @@ def calistir():
             # 1) Once yerel komut mu? (uygulama ac, arama yap vb. - Claude'a gitmeden)
             cevap = commands.calistir(metin)
 
-            # 2) Yerel komut degilse beyne (Claude) sor
+            # 2) Yerel komut degilse beyne (Claude) sor - son konusmalari baglam ver
             if cevap is None:
                 print("[Dusunuyor...]")
-                cevap = brain.dusun(metin)
+                baglam = memory.son_baglam(config.HAFIZA_BAGLAM_ADEDI)
+                cevap = brain.dusun(metin, baglam)
 
             print(f"[JARVIS]: {cevap}\n")
             konusmaci.konus(cevap)
+
+            # 3) Turu hafizaya kaydet (yerel komut ya da beyin - fark etmez)
+            memory.tur_kaydet(metin, cevap)
 
     except KeyboardInterrupt:
         print("\n[Ctrl+C ile cikildi.]")

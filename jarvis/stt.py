@@ -133,6 +133,12 @@ def ses_16k(ses, kaynak_hiz):
         return np.interp(x_new, x_old, ses).astype(np.float32)
 
 
+# Whisper'i Turkce'ye ve asistan konusma bicimine yonlendiren baglam ipucu.
+# Dogru dil secimini ve gunluk asistan kelimelerini tanimayi belirgin iyilestirir.
+_TR_IPUCU = ("Merhaba efendim. Bu bir Türkçe sesli asistan konuşmasıdır. "
+             "Kullanıcı JARVIS'e komut veriyor: uygulama aç, saat kaç, hava nasıl, "
+             "not defterini aç, müziği durdur gibi.")
+
 _WHISPER_AYAR = dict(
     language="tr",
     beam_size=5,
@@ -141,7 +147,22 @@ _WHISPER_AYAR = dict(
     condition_on_previous_text=False,
     temperature=0.0,
     no_speech_threshold=0.6,
+    initial_prompt=_TR_IPUCU,                          # Turkce/asistan baglami -> daha dogru
 )
+
+
+def sesi_yukselt(ses, np=None):
+    """Kisik mikrofonu tepe seviyeye normalize eder (halusinasyon yerine gercek algi).
+    Whisper'in dogru anlamasi icin dusuk sesi belirgin iyilestirir."""
+    if np is None:
+        import numpy as np
+    ses = np.asarray(ses, dtype=np.float32).flatten()
+    if ses.size == 0:
+        return ses
+    tepe = float(np.max(np.abs(ses)))
+    if tepe > 1e-4:
+        ses = (ses * min(0.95 / tepe, 12.0)).astype(np.float32)
+    return ses
 
 
 def whisper_coz(model, ses16, np=None):
@@ -159,9 +180,23 @@ def whisper_model_yukle():
 
 def dosyadan_coz(model, dosya_yolu: str) -> str:
     """Ses dosyasini (webm/wav/ogg...) Whisper ile Turkce metne cevirir.
-    faster-whisper decode + 16kHz'e ceviriyi kendi yapar (PyAV/ffmpeg)."""
-    segmentler, _ = model.transcribe(dosya_yolu, **_WHISPER_AYAR)
-    return " ".join(s.text for s in segmentler).strip()
+
+    Tarayicidan gelen ses genelde kisik ve sikistirilmis olur; onu 16 kHz'e cozup
+    tepe seviyeye yukseltiyoruz. Bu, model boyutunu buyutmeden dogrulugu artirir.
+    Cozme/yukseltme bir nedenle basarisiz olursa dogrudan dosya yolundan cozeriz.
+    """
+    try:
+        import numpy as np
+        from faster_whisper.audio import decode_audio
+        ses16 = decode_audio(dosya_yolu, sampling_rate=16000)
+        if ses16 is None or np.asarray(ses16).size < 4000:   # ~0.25 sn'den kisa
+            return ""
+        ses16 = sesi_yukselt(ses16, np)
+        return whisper_coz(model, ses16, np)
+    except Exception as e:
+        print("[STT] on-isleme atlandi, dogrudan cozuluyor:", e)
+        segmentler, _ = model.transcribe(dosya_yolu, **_WHISPER_AYAR)
+        return " ".join(s.text for s in segmentler).strip()
 
 
 class WhisperKaydedici:
@@ -210,9 +245,7 @@ class WhisperKaydedici:
             return ""
         rms = float(np.sqrt(np.mean(ses ** 2)))
         # ses seviyesini yukselt (kisik mikrofon -> halusinasyon yerine gercek algi)
-        tepe = float(np.max(np.abs(ses))) if ses.size else 0.0
-        if tepe > 1e-4:
-            ses = (ses * min(0.95 / tepe, 12.0)).astype(np.float32)
+        ses = sesi_yukselt(ses, np)
         ses16 = ses_16k(ses, self._kayit_hizi)
         metin = whisper_coz(self._model, ses16, np)
         print(f"[STT] hiz={self._kayit_hizi} sure={sure:.1f}s rms={rms:.4f} -> {metin!r}")

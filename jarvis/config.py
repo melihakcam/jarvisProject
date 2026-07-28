@@ -7,6 +7,7 @@ from pathlib import Path
 # --- Yollar ---
 PROJE_KOKU = Path(__file__).resolve().parent.parent
 MODEL_KLASORU = PROJE_KOKU / "models"
+VERI_KLASORU = PROJE_KOKU / "data"
 
 # Vosk ses modeli klasoru (indirilen model buraya cikarilir)
 # Kucuk Turkce model: vosk-model-small-tr-0.3  (~50 MB, hafif)
@@ -33,7 +34,14 @@ TTS_SES_TERCIHI = "Tolga"
 
 # --- Beyin (Claude Code) ---
 CLAUDE_KOMUTU = "claude"      # PATH'te 'claude' calisabilir olmali
-BEYIN_ZAMAN_ASIMI = 120       # saniye
+BEYIN_ZAMAN_ASIMI = 180       # saniye (bilgisayarda islem yapan gorevler daha uzun surebilir)
+
+# --- Hafiza (konusma gecmisi) ---
+# Tum konusmalar bu JSON dosyasina adim adim (kim ne dedi) kaydedilir.
+KONUSMA_GECMISI_YOLU = VERI_KLASORU / "konusmalar.json"
+# Beyne baglam olarak verilecek son giris sayisi (~5 tur). Buyutmek daha uzun
+# hafiza demektir ama beynin cevap suresini uzatabilir.
+HAFIZA_BAGLAM_ADEDI = 10
 
 # --- Genel ---
 VARSAYILAN_DIL = "tr"         # "tr" veya "en"

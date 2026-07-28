@@ -29,11 +29,23 @@ _SES_TALIMATI = (
     "Markdown, madde isareti, tablo, emoji veya kod blogu KULLANMA. "
     "Guncel bilgi gerekiyorsa web'de arama yap; ama cevabinda kaynak linki, "
     "URL veya 'Kaynak:' satiri EKLEME, bilgiyi dogal cumleyle soyle. "
-    "Kullanici hangi dilde yazdiysa o dilde cevap ver."
+    "Kullanici hangi dilde yazdiysa o dilde cevap ver. "
+    # --- Bilgisayarda islem yapma yetkisi ---
+    "Bu bilgisayarda GERCEKTEN islem yapabilirsin ve yonetici (admin) yetkisiyle "
+    "calisiyorsun. Kullanicinin istegini yerine getirmek icin gereken araclari "
+    "(Bash komutlari, dosya okuma/yazma/duzenleme) kullan ve isi FIILEN yap; "
+    "sadece nasil yapilacagini anlatma. Windows'tasin; komutlar Windows'a uygun olsun. "
+    "Islemi tamamladiktan sonra tek kisa cumleyle teyit et (ornek: 'Klasor olusturuldu efendim.'). "
+    "GUVENLIK: Geri donusu olmayan veya riskli islemlerde ONCE ne yapacagini tek "
+    "cumleyle soyleyip onay iste; kullanici 'evet' / 'onayliyorum' demeden bunlari YAPMA. "
+    "Bunlar: dosya veya klasor silme, bicimlendirme, disk/bolum islemleri, kayit "
+    "defteri (registry) veya sistem ayari degisikligi, cok sayida dosyayi ustune yazma, "
+    "e-posta/mesaj gonderme, odeme veya para transferi, kurulum/kaldirma. "
+    "Emin olmadigin yikici bir istekte de once teyit iste."
 )
 
-# Beyne acilan araclar: guncel bilgi icin web arama (salt-okunur, guvenli)
-_ARACLAR = ["WebSearch", "WebFetch"]
+# Beyne acilan araclar. Web arama + bilgisayarda fiili islem icin Bash ve dosya araclari.
+_ARACLAR = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch"]
 
 
 def _sese_hazirla(metin: str) -> str:
@@ -60,17 +72,34 @@ def _claude_yolu() -> str:
     return yol or config.CLAUDE_KOMUTU
 
 
-def dusun(soru: str) -> str:
-    """Soruyu Claude'a gonderir, sesli okunmaya uygun metin cevabi dondurur."""
+def dusun(soru: str, gecmis_metni: str = None) -> str:
+    """Soruyu Claude'a gonderir, sesli okunmaya uygun metin cevabi dondurur.
+
+    gecmis_metni verilirse (son konusmalar), soru bu baglamla birlikte gonderilir
+    ve JARVIS onceki konusmayi hatirlar. Bos/None ise davranis eskisiyle aynidir.
+    """
     soru = (soru or "").strip()
     if not soru:
         return ""
 
+    gecmis_metni = (gecmis_metni or "").strip()
+    if gecmis_metni:
+        istem = (
+            "Önceki konuşmamız:\n"
+            f"{gecmis_metni}\n\n"
+            f"Şimdiki soru: {soru}"
+        )
+    else:
+        istem = soru
+
     komut = [
         _claude_yolu(),
-        "-p", soru,
+        "-p", istem,
         "--append-system-prompt", _SES_TALIMATI,
         "--allowedTools", *_ARACLAR,
+        # Basli (headless) modda araclari onay beklemeden calistirabilsin diye.
+        # Guvenlik, sistem talimatindaki "yikici islemlerde once onay iste" kuraliyla saglanir.
+        "--dangerously-skip-permissions",
     ]
     try:
         sonuc = subprocess.run(

@@ -191,6 +191,19 @@ _TANIT_KALIPLARI = (" sen kimsin", " kimsin ", " kendini tanit", " adin ne", " i
                     " who are you", " introduce yourself")
 
 
+_TESEKKUR_KALIPLARI = (" tesekkur", " sagol", " sag ol", " eyvallah", " thank")
+
+
+def _tesekkur(t: str):
+    w = _kelimeler(t)
+    # Sadece kisa tesekkur cumleleri ("tesekkurler jarvis"); uzun cumle beyne gider
+    if len(w) > 4 or not any(k in t for k in _TESEKKUR_KALIPLARI):
+        return None
+    if " thank" in t:
+        return "You're welcome, sir."
+    return "Rica ederim efendim."
+
+
 _YETENEK_KALIPLARI = (" ne yapabilirsin", " neler yapabilirsin", " neler yaparsin",
                       " ne yaparsin", " yeteneklerin", " ozelliklerin",
                       " what can you do")
@@ -528,8 +541,14 @@ def _ag_durumu(t: str):
     return cevap + "."
 
 
+# Ses tanima "kilitle"yi "filitli", "kilitli" gibi yazabiliyor
+_KILIT_YAZIMLARI = ("kilit", "kilid", "filit", "klit")
+
+
 def _sistem(t: str):
-    if "bilgisayari kilitle" in t or "ekrani kilitle" in t:
+    w = _kelimeler(t)
+    hedef = any(k.startswith(("bilgisayar", "ekran", "pc")) for k in w)
+    if (hedef and any(k.startswith(_KILIT_YAZIMLARI) for k in w)) or " lock the computer" in t:
         subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", shell=True, creationflags=_GIZLI)
         return "Bilgisayari kilitliyorum efendim."
     return None
@@ -654,7 +673,7 @@ def _youtube_ozet(ham_metin: str):
 
 
 # Sirayla denenecek isleyiciler (normalize edilmis metinle calisanlar)
-_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _yetenekler, _ajanda_oku, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
+_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _yetenekler, _ajanda_oku, _tesekkur, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
                 _internette_ara, _dosya_bul, _dosya_duzenle, _ses_medya, _pencere, _sistem)
 
 

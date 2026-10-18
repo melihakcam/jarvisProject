@@ -182,6 +182,17 @@ def _mcp_gerekli(soru: str) -> bool:
     return any(k in s for k in config.MCP_ANAHTAR_KELIMELER)
 
 
+_ONAY_KELIMELERI = ("evet", "onayliyorum", "onayla", "onay", "tamam", "olur", "yap",
+                    "yapabilirsin", "devam", "kabul", "aynen", "yes", "ok", "okay",
+                    "sure", "go", "ahead", "do", "it", "lutfen", "jarvis", "efendim")
+
+
+def _onay_mi(soru: str) -> bool:
+    """Kisa bir onay cevabi mi? ("Evet", "Onayliyorum", "Tamam yap")"""
+    w = _sadelestir(soru).split()
+    return 0 < len(w) <= 4 and all(k in _ONAY_KELIMELERI for k in w)
+
+
 def _yol_sec(soru: str) -> str:
     """Sorunun gidecegi yol: "islem", "web" ya da "sohbet" (config'e bakin)."""
     s = _sadelestir(soru)
@@ -318,6 +329,10 @@ def dusun(soru: str, gecmis_metni: str = None) -> str:
         istem = soru
 
     yol = _yol_sec(soru)
+    # "Evet / onayliyorum" gibi kisa onaylar, onceki turda istenen islemi
+    # gercekten yapabilsin diye arac yoluna gider (sohbet yolunda yapamaz).
+    if yol == "sohbet" and gecmis_metni and _onay_mi(soru):
+        yol = "islem"
     # MCP sunuculari yalnizca gerektiginde yuklenir; gerekmiyorsa
     # --strict-mcp-config ile kapatilir ve her cagride birkac saniye kazanilir.
     mcp_kullan = _mcp_gerekli(soru)

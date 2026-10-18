@@ -901,11 +901,23 @@
     if (!webSpeechVar) { backendBitir(); return; }
     if (!tanimaAktif && !basiliTutuluyor) return;
     basiliTutuluyor = false;               // artik onend metni gonderecek
-    if (sonMetin) $("transcript").textContent = "İşleniyor…";
-    try { if (tanima) tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
-    // Edge son sonucu bazen cok gec teslim ediyor (onend gecikiyor). 1,5 sn
-    // icinde bitmezse beklemeyi kes, ekranda gorunen metni hemen gonder.
     var bekleyen = tanima;
+    // Ekranda metin varsa Edge'in "bitti" sonucunu bekleme: son kelime de
+    // yazilsin diye 0,25 sn sonra ekrandaki metni hemen gonder (anlik cevap).
+    if (sonMetin) {
+      $("transcript").textContent = "İşleniyor…";
+      setTimeout(function () {
+        if (tanima !== bekleyen || !tanimaAktif || basiliTutuluyor) return;
+        var metin = (sonMetin || "").trim();
+        sonMetin = ""; birikmis = ""; tanimaAktif = false;
+        state.listening = false; updateCore();
+        try { bekleyen.onend = null; bekleyen.abort(); } catch (e) {}   // cift gonderim olmasin
+        if (metin) _metniGonder(metin);
+      }, 250);
+      return;
+    }
+    try { if (tanima) tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
+    // Henuz metin yoksa Edge'in sonucunu en fazla 1,5 sn bekle.
     setTimeout(function () {
       if (tanima !== bekleyen || !tanimaAktif || basiliTutuluyor) return;
       var metin = (sonMetin || "").trim();

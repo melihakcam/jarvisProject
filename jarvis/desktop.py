@@ -29,10 +29,10 @@ import time
 import urllib.request
 
 try:
-    from jarvis import config
+    from jarvis import config, brain
     from jarvis.server import app
 except ImportError:
-    import config
+    import config, brain
     from server import app
 
 _HOST = "127.0.0.1"
@@ -98,6 +98,8 @@ def _sunucuyu_baslat() -> None:
         except Exception as e:
             print("Sunucu baslatilamadi:", e)
     threading.Thread(target=_calis, daemon=True).start()
+    # Ilk sohbet sorusu icin Claude hazir beklesin
+    threading.Thread(target=brain.onceden_hazirla, daemon=True).start()
 
 
 def _sunucu_hazir_mi(timeout: float = 15.0) -> bool:

@@ -336,6 +336,7 @@ def _hatirlatici_dongusu():
 
 def _onisitma():
     """STT modelini arka planda onceden yukler (ilk basista gecikme olmasin)."""
+    brain.onceden_hazirla()   # ilk sohbet sorusu icin Claude hazir beklesin
     try:
         _model_al()
         print("[onisitma] STT modeli hazir.")

@@ -40,7 +40,7 @@ except ImportError:
 # Uygulama tanimlari:  anahtar kelimeler -> (calistirma hedefi, kapatma imaji)
 # --------------------------------------------------------------------------
 UYGULAMALAR = {
-    ("not defteri", "notepad", "not defterini"): ("notepad", "notepad.exe"),
+    ("not defteri", "notepad", "not defterini", "not tefteri"): ("notepad", "notepad.exe"),
     ("hesap makinesi", "hesap makinesini", "calculator"): ("calc", "CalculatorApp.exe"),
     ("paint", "resim"): ("mspaint", "mspaint.exe"),
     ("chrome", "google chrome"): ("chrome", "chrome.exe"),
@@ -115,7 +115,11 @@ def _sadelestir(metin: str) -> str:
 
 
 def _normalize(metin: str) -> str:
-    return " " + _sadelestir(metin.strip() if metin else "") + " "
+    s = _sadelestir(metin.strip() if metin else "")
+    # Kelime sonundaki noktalama komutlari bozmasin ("ben kimsin?" -> "ben kimsin");
+    # "rapor.docx" gibi dosya adlarindaki nokta korunur.
+    s = re.sub(r"[?!.,;:]+(?=\s|$)", " ", s)
+    return " " + " ".join(s.split()) + " "
 
 
 # pythonw altinda alt sureclerin konsol penceresi acmamasi icin
@@ -151,13 +155,195 @@ def _saat_tarih(t: str):
     return None
 
 
+# Sadece "Jarvis" / "Hey Jarvis" denirse (ses tanima adi farkli yazabiliyor)
+_JARVIS_YAZIMLARI = ("jarvis", "carvis", "cervis", "gervis", "jervis", "javis",
+                     "jarvi", "jarviz", "carviz", "jarvise", "jarvisi", "cerviz",
+                     "jerry", "jeri", "jery", "jarry", "cerry", "cerri", "ceri")
+_SESLENME_EKLERI = ("hey", "hay", "hi", "hello", "ey", "hop", "selam", "merhaba")
+
+
+def _seslenme(t: str):
+    w = _kelimeler(t)
+    if not w or not any(k in _JARVIS_YAZIMLARI for k in w):
+        return None
+    if not all(k in _JARVIS_YAZIMLARI or k in _SESLENME_EKLERI for k in w):
+        return None
+    return "Emirlerinizi bekliyorum efendim."
+
+
+# Dil degistirme: panel ayni kaliplari taniyip dinleme/konusma dilini degistirir
+# (panel/index.html dilKomutu); burada sadece teyit cevabi verilir, beyne gitmez.
+_INGILIZCE_KALIPLARI = (" ingilizce konus", " ingilizceye gec", " speak english",
+                        " switch to english")
+_TURKCE_KALIPLARI = (" turkce konus", " turkceye gec", " speak turkish",
+                     " switch to turkish")
+
+
+def _dil_degistir(t: str):
+    if any(k in t for k in _INGILIZCE_KALIPLARI):
+        return "Switching to English, sir."
+    if any(k in t for k in _TURKCE_KALIPLARI):
+        return "Türkçeye geçiyorum efendim."
+    return None
+
+
+_TANIT_KALIPLARI = (" sen kimsin", " kimsin ", " kendini tanit", " adin ne", " ismin ne",
+                    " who are you", " introduce yourself")
+
+
+def _kendini_tanit(t: str):
+    if not any(k in t for k in _TANIT_KALIPLARI):
+        return None
+    if " who are you" in t or " introduce yourself" in t:
+        return "I am JARVIS, Melih Akçam's personal voice assistant, sir."
+    return "Ben JARVIS, Melih Akçam'ın sesli kişisel asistanıyım efendim."
+
+
+# --------------------------------------------------------------------------
+# Guncel bilgiler (kur, hava, haber): beyne + web aramaya gitmeden, dogrudan
+# kaynaktan. Soru yerel veriyle cevaplanamiyorsa (baska sehir, yorum, belirli
+# bir konu) ya da kaynaga ulasilamazsa None doner ve soru beyne gider.
+# --------------------------------------------------------------------------
+_AYLAR_TR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
+             "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+
+
+def _kelimeler(t: str):
+    return re.sub(r"[^\w\s]", " ", t).split()
+
+
+def _sayi_oku(x: float) -> str:
+    return f"{x:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
+# kod, okunusu, eslesen kelime baslari
+_DOVIZLER = (
+    ("USD", "dolar", ("dolar", "usd")),
+    ("EUR", "euro", ("euro", "avro", "eur")),
+    ("GBP", "sterlin", ("sterlin", "pound", "gbp")),
+)
+_KUR_KELIMELERI = ("kur", "kuru", "kurlar", "kurlari", "doviz", "dovizler", "dovizi")
+# Bunlar geciyorsa kur degil yorum/tahmin isteniyor -> beyne
+_YORUM_KELIMELERI = ("neden", "niye", "nicin", "tahmin", "yorum", "olacak", "artar",
+                     "duser", "yukselir", "yukseldi", "dustu", "gecen", "dun", "yarin")
+
+
+def _doviz_kuru(t: str):
+    w = _kelimeler(t)
+    secilen = [d for d in _DOVIZLER if any(k.startswith(d[2]) for k in w)]
+    if not secilen and not any(k in _KUR_KELIMELERI for k in w):
+        return None
+    if any(k.startswith(_YORUM_KELIMELERI) for k in w):
+        return None
+    try:
+        from jarvis import guncel
+    except ImportError:
+        import guncel
+    kur = guncel.kurlar()
+    if not kur:
+        return None
+    if not secilen:
+        secilen = list(_DOVIZLER[:2])   # "doviz kurlari" -> dolar ve euro
+
+    gun, ay, _yil = (kur.get("tarih") or "..").split(".")[:3]
+    tarih = f"{int(gun)} {_AYLAR_TR[int(ay) - 1]}" if gun.isdigit() and ay.isdigit() else ""
+    onek = f"Merkez Bankası'nın {tarih} tarihli kuruna göre" if tarih else "Merkez Bankası kuruna göre"
+
+    # "100 dolar kac TL" -> tutar cevir (tek doviz soruldugunda)
+    miktar = next((float(k.replace(",", ".")) for k in re.findall(r"\d+(?:[.,]\d+)?", t)), None)
+    if miktar and len(secilen) == 1 and secilen[0][0] in kur:
+        kod, ad, _ = secilen[0]
+        return (f"{onek} {_sayi_oku(miktar).removesuffix(',00')} {ad}, "
+                f"{_sayi_oku(miktar * kur[kod])} lira ediyor efendim.")
+
+    parcalar = [f"{ad} {_sayi_oku(kur[kod])} lira" for kod, ad, _ in secilen if kod in kur]
+    if not parcalar:
+        return None
+    return f"{onek} {', '.join(parcalar)} efendim."
+
+
+_HAVA_KELIMELERI = ("hava", "havalar", "havayi", "havasi")
+# "hava"dan once yalnizca bunlar gelebilir; baska kelime (ornegin bir sehir) varsa beyne
+_HAVA_ONCESI = ("jarvis", "bugun", "bugunku", "su", "an", "simdi", "disarida", "disari",
+                "burada", "burasi", "acaba")
+# "hava"dan sonra yalnizca bunlar gelebilir ("hava yollari bileti" gibi seyler elensin)
+_HAVA_SONRASI = ("durumu", "durumunu", "nasil", "nasilmis", "kac", "derece",
+                 "sicaklik", "sicakligi", "soguk", "sicak", "yagmur", "yagmurlu", "yagisli",
+                 "gunesli", "bulutlu", "var", "mi", "mu", "nedir", "ne", "soyle",
+                 "soyler", "misin", "ac", "efendim", "jarvis", "bugun", "su", "an", "simdi")
+
+
+def _hava_durumu(t: str):
+    w = _kelimeler(t)
+    yer = next((i for i, k in enumerate(w) if k in _HAVA_KELIMELERI), None)
+    if yer is None:
+        return None
+    if not all(k in _HAVA_ONCESI for k in w[:yer]):
+        return None
+    if not all(k in _HAVA_SONRASI for k in w[yer + 1:]):
+        return None
+    try:
+        from jarvis import weather
+    except ImportError:
+        import weather
+    if not weather.hava().get("ok"):
+        return None
+    return weather.ozet_metin().rstrip(".") + " efendim."
+
+
+_HABER_KELIMELERI = ("haber", "gundem", "manset")
+# Haber kelimesinin yaninda yalnizca bunlar varsa genel gundem istenmistir;
+# baska bir kelime (ornegin "fenerbahce haberleri") belirli konu demektir -> beyne
+_HABER_DOLGU = ("jarvis", "bugun", "bugunun", "bugunku", "son", "dakika", "guncel",
+                "gunun", "neler", "ne", "var", "oku", "soyle", "soyler", "misin", "anlat",
+                "bana", "onemli", "ana", "baslik", "basliklar", "basliklari", "nedir",
+                "mi", "neymis", "olan", "biten", "ozetle", "kisaca", "efendim", "turkiye",
+                "turkiyede", "lutfen", "oluyor", "dunyada")
+
+
+def _haberler(t: str):
+    w = _kelimeler(t)
+    if not any(k.startswith(_HABER_KELIMELERI) for k in w) and " son dakika" not in t:
+        return None
+    if not all(k.startswith(_HABER_KELIMELERI) or k in _HABER_DOLGU for k in w):
+        return None
+    try:
+        from jarvis import guncel
+    except ImportError:
+        import guncel
+    sonuc = guncel.basliklar(3)
+    if not sonuc:
+        return None
+    kaynak, liste = sonuc
+    basliklar = ". ".join(b.rstrip(".!? ") for b in liste)
+    return f"{kaynak} son başlıkları şöyle efendim. {basliklar}."
+
+
+# "ac" ayri bir kelime olarak gecmeli; "olacak", "kac" gibi kelimelerin icindeki
+# harfler yanlislikla bir sey actirmasin
+_AC_KELIMELERI = ("ac", "acar", "acin", "acsana", "acabilir", "acarmisin", "acmani",
+                  "acilsin", "baslat", "baslatir", "baslatin")
+# Ingilizce modda soylenenler; bunlarla gelen komuta cevap da Ingilizce verilir
+_AC_KELIMELERI_EN = ("open", "launch", "start")
+_KAPAT_KELIMELERI_EN = ("close", "quit")
+
+
+def _eslesen(t: str, kelimeler) -> str:
+    """Metinde gecen anahtar kelime (Ingilizce cevapta soylenen ad kullanilsin)."""
+    return next((k for k in kelimeler if k in t), kelimeler[0]).strip()
+
+
 def _uygulama_ac(t: str):
-    if "ac" not in t and "baslat" not in t:
+    kelimeler_t = _kelimeler(t)
+    ingilizce = any(k in _AC_KELIMELERI_EN for k in kelimeler_t)
+    if not ingilizce and not any(k in _AC_KELIMELERI for k in kelimeler_t):
         return None
     # Once site mi?
     for kelimeler, url in SITELER.items():
         if any(k in t for k in kelimeler):
             webbrowser.open(url)
+            if ingilizce:
+                return f"Opening {kelimeler[0]}, sir."
             return f"Tabii efendim, {kelimeler[0]} aciliyor."
     # Uygulama mi?
     for kelimeler, (hedef, _imaj) in UYGULAMALAR.items():
@@ -166,17 +352,24 @@ def _uygulama_ac(t: str):
                 webbrowser.open("https://www.google.com")
             else:
                 _baslat(hedef)
+            if ingilizce:
+                return f"Opening {_eslesen(t, kelimeler)}, sir."
             return f"Tabii efendim, {kelimeler[0]} aciliyor."
     return None
 
 
 def _uygulama_kapat(t: str):
-    if "kapat" not in t:
+    ingilizce = any(k in _KAPAT_KELIMELERI_EN for k in _kelimeler(t))
+    if not ingilizce and "kapat" not in t:
         return None
     for kelimeler, (_hedef, imaj) in UYGULAMALAR.items():
         if imaj and any(k in t for k in kelimeler):
             if _kapat(imaj):
+                if ingilizce:
+                    return f"Closing {_eslesen(t, kelimeler)}, sir."
                 return f"Tabii efendim, {kelimeler[0]} kapatildi."
+            if ingilizce:
+                return f"{_eslesen(t, kelimeler)} already seems closed, sir."
             return f"{kelimeler[0]} zaten kapali gorunuyor efendim."
     return None
 
@@ -428,7 +621,7 @@ def _youtube_ozet(ham_metin: str):
 
 
 # Sirayla denenecek isleyiciler (normalize edilmis metinle calisanlar)
-_ISLEYICILER = (_saat_tarih, _ag_durumu, _uygulama_ac, _uygulama_kapat,
+_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
                 _internette_ara, _dosya_bul, _dosya_duzenle, _ses_medya, _pencere, _sistem)
 
 

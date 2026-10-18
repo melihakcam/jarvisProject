@@ -13,6 +13,11 @@ import time
 import urllib.parse
 import urllib.request
 
+try:
+    from jarvis import config
+except ImportError:
+    import config
+
 _ONBELLEK_SURESI = 600           # 10 dakika
 _KONUM_ONBELLEK_SURESI = 3600    # 1 saat
 
@@ -42,7 +47,10 @@ def _getir(url: str, zaman_asimi: int = 6):
 
 
 def konum():
-    """IP adresinden gercek konum. Basarisiz olursa None."""
+    """config.HAVA_KONUMU ayarliysa o, degilse IP adresinden konum. Basarisiz olursa None."""
+    sabit = getattr(config, "HAVA_KONUMU", None)
+    if sabit:
+        return dict(sabit)
     with _kilit:
         if _konum["veri"] and time.time() - _konum["zaman"] < _KONUM_ONBELLEK_SURESI:
             return _konum["veri"]

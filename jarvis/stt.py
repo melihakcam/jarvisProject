@@ -136,8 +136,13 @@ def ses_16k(ses, kaynak_hiz):
 # Whisper'i Turkce'ye ve asistan konusma bicimine yonlendiren baglam ipucu.
 # Dogru dil secimini ve gunluk asistan kelimelerini tanimayi belirgin iyilestirir.
 _TR_IPUCU = ("Merhaba efendim. Bu bir Türkçe sesli asistan konuşmasıdır. "
-             "Kullanıcı JARVIS'e komut veriyor: uygulama aç, saat kaç, hava nasıl, "
-             "not defterini aç, müziği durdur gibi.")
+             "Kullanıcı JARVIS'e komut veriyor: not defterini aç, masaüstündeki "
+             "dosyayı aç, YouTube'u aç, Chrome'u aç, hesap makinesi, saat kaç, "
+             "hava nasıl, dolar kaç, haberleri oku, sesi aç, müziği durdur, "
+             "kendini tanıt, İngilizce konuş.")
+_EN_IPUCU = ("Hello sir. This is an English voice assistant conversation. "
+             "The user talks to JARVIS: who are you, open YouTube, what time is it, "
+             "what's the weather, speak Turkish.")
 
 _WHISPER_AYAR = dict(
     language="tr",
@@ -165,9 +170,26 @@ def sesi_yukselt(ses, np=None):
     return ses
 
 
+def _dil_ayari(model, ses16) -> dict:
+    """Konusmanin Turkce mi Ingilizce mi oldugunu secip Whisper ayarini dondurur.
+
+    Whisper'in serbest dil algilamasi kisa Turkce cumleleri baska dillere
+    (Azerice vb.) kaydirabilir; bu yuzden sadece tr ile en karsilastirilir ve
+    esitlikte Turkce secilir.
+    """
+    try:
+        _, _, olasiliklar = model.detect_language(ses16)
+        p = dict(olasiliklar)
+        if p.get("en", 0.0) > p.get("tr", 0.0):
+            return dict(_WHISPER_AYAR, language="en", initial_prompt=_EN_IPUCU)
+    except Exception as e:
+        print("[STT] dil algilanamadi, Turkce varsayildi:", e)
+    return _WHISPER_AYAR
+
+
 def whisper_coz(model, ses16, np=None):
-    """16 kHz float ses dizisini Whisper ile Turkce metne cevirir."""
-    segmentler, _ = model.transcribe(ses16, **_WHISPER_AYAR)
+    """16 kHz float ses dizisini Whisper ile metne cevirir (Turkce ya da Ingilizce)."""
+    segmentler, _ = model.transcribe(ses16, **_dil_ayari(model, ses16))
     return " ".join(s.text for s in segmentler).strip()
 
 

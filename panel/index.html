@@ -122,13 +122,17 @@
       <div style="width:100%; padding:16px 18px; border:1px solid rgba(95,224,255,.22); background:linear-gradient(180deg, rgba(10,34,56,.7), rgba(6,20,34,.55));">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="font-size:13px; font-weight:600; letter-spacing:.26em; color:#8fd8f5;">SESLİ KOMUT</div>
-          <div class="mono" id="micLabel" style="font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55);">SESSİZ</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="mono hoverbtn" id="dilBtn" title="Dinleme/konuşma dili (İngilizce konuş / Türkçe konuş)" style="font-size:10px; letter-spacing:.14em; padding:3px 7px; border:1px solid rgba(95,224,255,.35); color:#a8e2fa; cursor:pointer;">TR</div>
+            <div class="mono" id="micLabel" style="font-size:10px; letter-spacing:.18em; color:rgba(160,215,240,.55);">SESSİZ</div>
+          </div>
         </div>
         <div style="display:flex; align-items:center; gap:16px;">
           <div id="micBtn" class="mic-btn hoverbtn" style="flex-shrink:0; width:56px; height:56px; border-radius:50%; border:1px solid rgba(95,224,255,.45); display:grid; place-items:center; cursor:pointer; background:rgba(95,224,255,.08);">
             <div style="width:14px; height:22px; border-radius:7px; border:2px solid #5fe0ff;"></div>
           </div>
           <div id="waveBars" style="flex:1; display:flex; align-items:center; gap:3px; height:56px;"></div>
+          <div id="susturBtn" class="mono hoverbtn" title="Konuşmayı durdur (Esc)" style="display:none; flex-shrink:0; padding:8px 10px; font-size:10px; letter-spacing:.16em; color:#ffc689; border:1px solid rgba(255,179,92,.45); background:rgba(255,179,92,.08); cursor:pointer;">SUSTUR</div>
         </div>
         <div style="margin-top:14px; padding:10px 12px; border-left:2px solid #5fe0ff; background:rgba(95,224,255,.06);">
           <div class="mono" id="transcript" style="font-size:12px; color:#eaf9ff;">Hazırım. Bir komut bekliyorum.</div>
@@ -204,26 +208,95 @@
   var analyser = null, stream = null, actx = null, freq = null, raf = null;
 
   // ---- TARAYICI SESİ (JARVIS panelde konuşur; sunucu çökse bile çalışır) ----
-  var trVoice = null;
+  var trVoice = null, enVoice = null;
   function pickVoice() {
     if (!window.speechSynthesis) return;
     var vs = window.speechSynthesis.getVoices() || [];
     trVoice = vs.filter(function (v) { return /tr/i.test(v.lang) || /tolga|turk/i.test(v.name); })[0] || null;
+    enVoice = vs.filter(function (v) { return /^en(-|_|$)/i.test(v.lang); })[0] || null;
+  }
+
+  // ---- DİL (dinleme + konuşma): "İngilizce konuş" / "Türkçe konuş" ya da TR/EN düğmesi ----
+  var dil = "tr";
+  try { if (localStorage.getItem("jarvisDil") === "en") dil = "en"; } catch (e) {}
+  function setDil(yeni) {
+    dil = yeni === "en" ? "en" : "tr";
+    try { localStorage.setItem("jarvisDil", dil); } catch (e) {}
+    var b = document.getElementById("dilBtn");
+    if (b) b.textContent = dil.toUpperCase();
+  }
+  // Duyulan metin dil degistirme komutu mu? (jarvis/commands.py _dil_degistir ile ayni kaliplar)
+  function dilKomutu(metin) {
+    // Sadelestir: buyuk/kucuk, I/ı/İ ve Turkce harf farklari eslesmeyi bozmasin
+    // ("Ingilizce konuş" -> "ingilizce konus")
+    var m = (metin || "").replace(/[Iıİ]/g, "i").toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    if (/ingilizce konus|ingilizceye gec|speak english|switch to english/.test(m)) return "en";
+    if (/turkce konus|turkceye gec|speak turkish|switch to turkish/.test(m)) return "tr";
+    return null;
   }
   if (window.speechSynthesis) {
     pickVoice();
     window.speechSynthesis.onvoiceschanged = pickVoice;
   }
+  // Metin cumle cumle kuyruga eklenir: Chrome uzun tek parca metinde takilip
+  // cancel()'i dinlemeyebiliyor; kisa parcalarda susturma her zaman calisir.
+  var konusuyor = false, kalanCumle = 0, sonSoylenen = "", konusmaNo = 0;
+  function _konusmaDurumu(acik) {
+    konusuyor = acik;
+    var b = document.getElementById("susturBtn");
+    if (b) b.style.display = acik ? "block" : "none";
+  }
+  function susturJarvis() {
+    kalanCumle = 0;
+    konusmaNo++;          // iptal edilen cumlelerin gec gelen olaylari yok sayilir
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    _konusmaDurumu(false);
+  }
   function speak(text) {
     if (!text || !window.speechSynthesis) return;
+    susturJarvis();
+    sonSoylenen = text;
+    var cumleler = text.match(/[^.!?…]+[.!?…]*/g) || [text];
+    cumleler = cumleler.map(function (c) { return c.trim(); }).filter(Boolean);
+    kalanCumle = cumleler.length;
+    var no = konusmaNo;
     try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang = "tr-TR";
-      if (trVoice) u.voice = trVoice;
-      u.rate = 1.0; u.pitch = 1.0;
-      window.speechSynthesis.speak(u);
-    } catch (e) {}
+      cumleler.forEach(function (c) {
+        var u = new SpeechSynthesisUtterance(c);
+        u.lang = dil === "en" ? "en-US" : "tr-TR";
+        var ses = dil === "en" ? enVoice : trVoice;
+        if (ses) u.voice = ses;
+        u.rate = 1.0; u.pitch = 1.0;
+        u.onstart = function () { if (no === konusmaNo) _konusmaDurumu(true); };
+        u.onend = u.onerror = function () {
+          if (no !== konusmaNo) return;
+          kalanCumle = Math.max(0, kalanCumle - 1);
+          if (!kalanCumle) _konusmaDurumu(false);
+        };
+        window.speechSynthesis.speak(u);
+      });
+    } catch (e) { _konusmaDurumu(false); }
+  }
+
+  // ---- YANKI FILTRESI: mikrofon JARVIS'in kendi sesini duyduysa gonderme ----
+  function _sade(m) {
+    return (m || "").toLocaleLowerCase("tr-TR")
+      .replace(/[^a-z0-9çğıöşüâîû\s]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function kendiSesiMi(duyulan) {
+    var d = _sade(duyulan), s = _sade(sonSoylenen);
+    if (!d || !s) return false;
+    if (s.indexOf(d) !== -1) return true;
+    var sk = {}; s.split(" ").forEach(function (k) { sk[k] = 1; });
+    var kelimeler = d.split(" "), ortak = 0;
+    kelimeler.forEach(function (k) { if (sk[k]) ortak++; });
+    return kelimeler.length >= 3 && ortak / kelimeler.length > 0.7;
+  }
+  function kendiSesimiDuydum() {
+    var m = "Kendi sesimi duydum efendim, tekrar söyler misiniz?";
+    $("transcript").textContent = m;
+    pushLog("yankı algılandı — jarvis'in kendi sesi yok sayıldı.", "#ffc689");
   }
 
   // ---- SAAT (gerçek zamanlı) ----
@@ -656,7 +729,11 @@
     fetch("/transcribe", { method: "POST", body: fd })
       .then(function (r) { return r.json(); })
       .then(function (d) {
+        // Whisper yolunda soru sunucuda cevaplanmis olur; yine de yanki ise okutma
+        if (d.heard && kendiSesiMi(d.heard)) { kendiSesimiDuydum(); return; }
         if (d.heard) pushLog("sen: " + d.heard, "#a8e2fa");
+        var yeniDil = dilKomutu(d.heard);
+        if (yeniDil) setDil(yeniDil);
         var cevap = d.answer || "Bir cevap alamadım efendim.";
         $("transcript").textContent = cevap;
         if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
@@ -677,8 +754,18 @@
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var webSpeechVar = !!SR;
   var tanima = null, tanimaAktif = false, sonMetin = "", birikmis = "", basiliTutuluyor = false;
+  var webSpeechHata = 0;
 
-  function _metniGonder(metin) {
+  // Ses tanima "Jarvis"i bazen "Jerry", "Cervis" gibi yaziyor; cumle basindaki
+  // hitapta duzeltilir (ekranda/kayitta dogru ad gorunsun, komutlar tanisin)
+  var _YANLIS_AD = /^(\s*(?:hey|hay|hi|ey)?[\s,]*)(jerry|jeri|jery|jarry|cerry|cerri|ceri|cervis|çervis|cerviz|gervis|jervis|carvis|çarviz|carviz|jarviz|javis|jarvi|jarvıs)(?=[\s.,!?]|$)/i;
+  function adiDuzelt(metin) {
+    return (metin || "").replace(_YANLIS_AD, function (_, on) { return on + "Jarvis"; });
+  }
+
+  function _metniGonder(metin, yazili) {
+    if (!yazili) metin = adiDuzelt(metin);
+    if (!yazili && kendiSesiMi(metin)) { kendiSesimiDuydum(); return; }
     pushLog("sen: " + metin, "#a8e2fa");
     $("transcript").textContent = "İşleniyor…";
     fetch("/ask", {
@@ -688,6 +775,8 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
+        var yeniDil = dilKomutu(metin);
+        if (yeniDil) setDil(yeniDil);
         var cevap = d.answer || "Bir cevap alamadım efendim.";
         $("transcript").textContent = cevap;
         if (d.answer) pushLog("jarvis yanıtladı" + (d.source ? " (" + d.source + ")" : "") + ".", "#6effc0");
@@ -701,7 +790,7 @@
 
   function _tanimaKur() {
     var r = new SR();
-    r.lang = "tr-TR";
+    r.lang = dil === "en" ? "en-US" : "tr-TR";
     r.interimResults = true;
     r.continuous = true;          // duraklamada KESME; kullanici birakana kadar dinle
     r.maxAlternatives = 1;
@@ -710,6 +799,7 @@
       for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
       // birikmis: onceki oturumlardan (arada kesildiyse) gelen metin
       sonMetin = (birikmis + " " + t).trim();
+      if (t) webSpeechHata = 0;     // calisiyor -> hata sayacini sifirla
       $("transcript").textContent = sonMetin ? ("… " + sonMetin) : "Dinliyorum…";
     };
     r.onerror = function (e) {
@@ -721,11 +811,19 @@
       } else if (hata === "no-speech" || hata === "aborted") {
         // gecici: kullanici hala basili tutuyorsa onend yeniden baslatir. bir sey yapma.
       } else {
-        // ag/servis yok (ornegin WebView2) -> yedek Whisper yoluna kalici gec
-        webSpeechVar = false; basiliTutuluyor = false; tanimaAktif = false;
+        // Gecici ag/servis hatasi olabilir: tek hatada daha zayif Whisper'a
+        // kalici gecme; ust uste 3 hatada (ornegin WebView2'de servis yok) gec.
+        webSpeechHata++;
+        basiliTutuluyor = false; tanimaAktif = false;
         state.listening = false; updateCore();
-        pushLog("tarayıcı ses tanıma yok, yedek motora geçildi.", "#ffb35c");
-        $("transcript").textContent = "Ses motoru değişti efendim, tekrar deneyin.";
+        if (webSpeechHata >= 3) {
+          webSpeechVar = false;
+          pushLog("tarayıcı ses tanıma çalışmıyor, yedek motora geçildi.", "#ffb35c");
+          $("transcript").textContent = "Ses motoru değişti efendim, tekrar deneyin.";
+        } else {
+          pushLog("tarayıcı ses tanıma hatası (" + hata + "), tekrar denenecek.", "#ffb35c");
+          $("transcript").textContent = "Anlayamadım efendim, tekrar söyler misiniz?";
+        }
       }
     };
     r.onend = function () {
@@ -744,7 +842,23 @@
     return r;
   }
 
+  // Bas ve sustur: tusa basilinca JARVIS hemen susar. Konusuyorduysa hoparlordeki
+  // yanki sonmesi icin mikrofon kisa bir sure sonra acilir; bu surede birakilirsa
+  // sadece susturulmus olur.
+  var baslatmaZamanlayici = null;
   function sesBaslat() {
+    var konusuyordu = konusuyor;
+    susturJarvis();
+    if (!konusuyordu) { _sesBaslat(); return; }
+    if (baslatmaZamanlayici) return;
+    $("transcript").textContent = "Dinliyorum…";
+    baslatmaZamanlayici = setTimeout(function () {
+      baslatmaZamanlayici = null;
+      _sesBaslat();
+    }, 300);
+  }
+
+  function _sesBaslat() {
     if (!webSpeechVar) { backendBaslat(); return; }
     if (tanimaAktif) return;
     try {
@@ -761,6 +875,12 @@
   }
 
   function sesBitir() {
+    if (baslatmaZamanlayici) {           // mikrofon acilmadan birakildi -> sadece sustur
+      clearTimeout(baslatmaZamanlayici);
+      baslatmaZamanlayici = null;
+      $("transcript").textContent = "Emrinizi bekliyorum efendim.";
+      return;
+    }
     if (!webSpeechVar) { backendBitir(); return; }
     if (!tanimaAktif && !basiliTutuluyor) return;
     basiliTutuluyor = false;               // artik onend metni gonderecek
@@ -828,8 +948,15 @@
         return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
       };
       document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { susturJarvis(); return; }
         if (yaziyor(e)) return;
         if (e.code === "Space" && !e.repeat) { e.preventDefault(); sesBaslat(); }
+      });
+      $("susturBtn").addEventListener("click", susturJarvis);
+      setDil(dil);
+      $("dilBtn").addEventListener("click", function () {
+        setDil(dil === "tr" ? "en" : "tr");
+        pushLog("dil: " + (dil === "en" ? "İngilizce" : "Türkçe") + ".", "#5fe0ff");
       });
       document.addEventListener("keyup", function (e) {
         if (yaziyor(e)) return;
@@ -842,7 +969,7 @@
         var metin = kutu.value.trim();
         if (!metin) return;
         kutu.value = "";
-        _metniGonder(metin);
+        _metniGonder(metin, true);   // yazili komut: yanki kontrolu gerekmez
       };
       $("textCmdBtn").addEventListener("click", gonder);
       kutu.addEventListener("keydown", function (e) {

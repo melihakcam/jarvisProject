@@ -35,6 +35,7 @@ def calistir():
     print("  J.A.R.V.I.S  -  baslatiliyor...")
     print("=" * 50)
 
+    brain.onceden_hazirla()   # ilk sohbet sorusu icin Claude hazir beklesin
     dinleyici = stt.Dinleyici()
     konusmaci = tts.Konusmaci()
 

@@ -44,6 +44,36 @@ BEYIN_ZAMAN_ASIMI = 180       # saniye (bilgisayarda islem yapan gorevler daha u
 # Beyin modeli: sesli asistan icin HIZ onemli. "haiku" en hizlisi (onerilen).
 #   Daha akilli ama yavas isterseniz: "sonnet" ya da "opus".
 BEYIN_MODEL = "haiku"
+# Sohbet sorulari icin bir Claude sureci onceden acilip bekletilir; her soruda
+# ~2 sn suren acilis beklenmez. Her surec tek soru cevaplar, token birikmez.
+BEYIN_HAZIR_BEKLET = True
+
+# --- Beyin yollari (hiz ve token icin) ---
+# Her soru anahtar kelimeye gore uc yoldan birine gider:
+#   islem : bilgisayarda is yapma -> tum araclar + skill'ler (en yavas, en pahali)
+#   web   : guncel bilgi          -> sadece WebSearch/WebFetch
+#   sohbet: geri kalan her sey    -> aracsiz, skill'siz (en hizli, en ucuz)
+# Kelimeler Turkce karaktersiz ve kucuk harfle yazilir; kelime basindan eslesir
+# ("dosya" -> "dosyayi" da tutar). Sonunda bosluk olan kelime tam eslesir ("ara ").
+# Iki listeden de kelime gecerse islem yolu secilir.
+ISLEM_ANAHTAR_KELIMELER = (
+    "olustur", "kaydet", "dosya", "klasor", "sil", "tasi", "kopyala",
+    "duzenle", "yeniden adlandir", "word", "pdf", "excel", "powerpoint",
+    "belge", "sunum", "rapor", "tablo", "kurulum", "yukle", "calistir",
+    "komut", "masaustu", "indir", "terminal",
+    # Yerel komutun cozemedigi ac/kapat istekleri ("Ac." gibi onceki konusmaya
+    # bagli olanlar) araclarla yapilsin; sohbet yolunda Claude bir sey acamaz
+    "ac ", "acar", "acsana", "acabilir", "acin ", "acma", "kapat", "baslat",
+    "create", "save", "file", "folder", "delete", "install", "run ",
+    "open", "close", "launch",
+)
+WEB_ANAHTAR_KELIMELER = (
+    "haber", "gundem", "guncel", "bugun", "son dakika", "dolar", "euro",
+    "doviz", "kur ", "kuru", "borsa", "bitcoin", "altin", "fiyat", "kac para",
+    "mac ", "maci", "maclar", "skor", "puan durumu", "hava", "kimdir",
+    "kim kazandi", "ara ", "arastir", "internet", "secim", "deprem",
+    "news", "today", "price", "weather", "search", "latest",
+)
 
 # --- MCP baglantilari (Gmail, Takvim vb.) ---
 # MCP sunuculari her cagride yeniden yuklenir ve bu birkac saniye ekler. Sesli
@@ -65,12 +95,17 @@ MCP_ANAHTAR_KELIMELER = (
     "email", "calendar", "meeting", "appointment", "schedule",
 )
 
+# --- Hava durumu konumu ---
+# Sabit sehir. None yapilirsa konum internet (IP) adresinden bulunur; bu
+# bazen yanlis sehir verebilir.
+HAVA_KONUMU = {"city": "KONYA", "lat": 37.8714, "lon": 32.4846}
+
 # --- Hafiza (konusma gecmisi) ---
 # Tum konusmalar bu JSON dosyasina adim adim (kim ne dedi) kaydedilir.
 KONUSMA_GECMISI_YOLU = VERI_KLASORU / "konusmalar.json"
-# Beyne baglam olarak verilecek son giris sayisi (~5 tur). Buyutmek daha uzun
-# hafiza demektir ama beynin cevap suresini uzatabilir.
-HAFIZA_BAGLAM_ADEDI = 10
+# Beyne baglam olarak verilecek son giris sayisi (~2 tur). Buyutmek daha uzun
+# hafiza demektir ama her soruda daha fazla token ve daha uzun cevap suresi.
+HAFIZA_BAGLAM_ADEDI = 4
 
 # --- Masaustu uygulamasi ---
 # True yapilirsa uygulama her acilista kendini yonetici olarak yeniden baslatir

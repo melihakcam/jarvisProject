@@ -253,12 +253,28 @@
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
     _konusmaDurumu(false);
   }
+  // Metni okunacak parcalara boler. Sadece gercek cumle sonlarinda (. ! ? …
+  // ardindan bosluk) bolunur; "4.944" ya da "list.reverse" bolunmez. Kisa
+  // cumleler ~300 karakterlik parcalarda birlestirilir: her parcada ses tonu
+  // sifirlandigi icin az parca = daha akici okuma. Uzun metinde yine birkac
+  // parca olur (Chrome'un uzun metinde takilma hatasi ve susturma icin).
+  var _PARCA_SINIRI = 300;
+  function _parcala(text) {
+    var cumleler = text.split(/(?<=[.!?…])\s+/).map(function (c) { return c.trim(); }).filter(Boolean);
+    var parcalar = [], aktif = "";
+    cumleler.forEach(function (c) {
+      if (aktif && (aktif.length + 1 + c.length) > _PARCA_SINIRI) { parcalar.push(aktif); aktif = c; }
+      else aktif = aktif ? aktif + " " + c : c;
+    });
+    if (aktif) parcalar.push(aktif);
+    return parcalar.length ? parcalar : [text];
+  }
+
   function speak(text) {
     if (!text || !window.speechSynthesis) return;
     susturJarvis();
     sonSoylenen = text;
-    var cumleler = text.match(/[^.!?…]+[.!?…]*/g) || [text];
-    cumleler = cumleler.map(function (c) { return c.trim(); }).filter(Boolean);
+    var cumleler = _parcala(text);
     kalanCumle = cumleler.length;
     var no = konusmaNo;
     try {

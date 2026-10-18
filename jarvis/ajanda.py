@@ -188,7 +188,8 @@ def komuttan_ekle(metin: str):
     Anlasilmazsa None doner (metin hatirlatici komutu degildir)."""
     ham = metin or ""
     t = _sadelestir(ham)
-    if "hatirlat" not in t and "hatirlatici" not in t:
+    ajandaya_ekle = "ajanda" in t and any(k in t for k in ("ekle", "kaydet", "yaz", "not al"))
+    if "hatirlat" not in t and not ajandaya_ekle:
         return None
 
     simdi = datetime.datetime.now()
@@ -226,13 +227,16 @@ def komuttan_ekle(metin: str):
                   r"\bsaat\b", r"\bhatırlatıcı\b", r"\bhatirlatici\b",
                   r"\bhatırlat\b", r"\bhatirlat\b", r"\bbana\b", r"\byarın\b",
                   r"\byarin\b", r"\bbugün\b", r"\bbugun\b", r"\bjarvis\b",
-                  r"\bekle\b", r"\bkur\b", r"\b\d{1,2}\s*'?[dtDT][eaEA]\b"):
+                  r"\bekle\b", r"\bkur\b", r"\b\d{1,2}\s*'?[dtDT][eaEA]\b",
+                  r"\bajanda(?:ya|ma|mıza|miza|m)?\b", r"\byaz\b", r"\bkaydet\b",
+                  r"\bnot al\b"):
         baslik = re.sub(desen, " ", baslik, flags=re.IGNORECASE)
     baslik = re.sub(r"^\s*['’]?\s*(?:da|de|ta|te)\b", " ", baslik, flags=re.IGNORECASE)
     baslik = " ".join(baslik.split()).strip(" ,.-'’")
     if not baslik:
         baslik = "Hatırlatıcı"
-    baslik = baslik[0].upper() + baslik[1:]
+    # Turkce buyuk harf: "i" -> "İ" (str.upper() "I" yapar)
+    baslik = ("İ" if baslik[0] == "i" else baslik[0].upper()) + baslik[1:]
 
     kayit = ekle(zaman, baslik, meta="SESLİ HATIRLATICI",
                  tarih=tarih.isoformat())

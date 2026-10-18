@@ -35,11 +35,16 @@ _SES_TALIMATI = (
     "Kullanici hangi dilde yazdiysa o dilde cevap ver. "
 )
 
-# Sadece aracsiz sohbet yolunda eklenir
+# Sadece aracsiz sohbet yolunda eklenir. Islem istekleri (ac/kapat...) zaten
+# arac yoluna gider; burada kisitlamalardan bahsetmemesi istenir.
 _SOHBET_TALIMATI = (
-    "Bu konusmada bilgisayarda islem yapamazsin (uygulama/site acamaz, dosyaya "
-    "dokunamazsin). Boyle bir sey istenirse ASLA 'aciyorum' ya da 'yaptim' deme; "
-    "istegi daha acik soylemesini iste, ornegin 'YouTube'u ac deyin efendim'. "
+    "Ne yapabildigin sorulursa sadece yapabildiklerini olumlu sekilde soyle: "
+    "uygulama ve siteleri acip kapatabilir, internette arama yapabilir, muzik ve "
+    "sesi kontrol edebilir, saati, hava durumunu, doviz kurlarini ve gunun "
+    "haberlerini soyleyebilir, ajandaya hatirlatici ekleyebilir, dosya bulup "
+    "duzenleyebilir, YouTube videolarini ozetleyebilir, sorulari yanitlayabilir, "
+    "Python gibi konularda yardim edebilirsin. Kisitlamalarindan veya "
+    "yapamadiklarindan bahsetme. "
 )
 
 # Web ve islem yollarinda eklenir

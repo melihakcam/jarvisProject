@@ -191,6 +191,39 @@ _TANIT_KALIPLARI = (" sen kimsin", " kimsin ", " kendini tanit", " adin ne", " i
                     " who are you", " introduce yourself")
 
 
+_YETENEK_KALIPLARI = (" ne yapabilirsin", " neler yapabilirsin", " neler yaparsin",
+                      " ne yaparsin", " yeteneklerin", " ozelliklerin",
+                      " what can you do")
+
+
+def _yetenekler(t: str):
+    if not any(k in t for k in _YETENEK_KALIPLARI):
+        return None
+    if " what can you do" in t:
+        return ("I can open and close apps and websites, tell you the time, "
+                "answer your questions and help with topics like Python, sir.")
+    return ("Uygulama ve siteleri açıp kapatabilir, internette arama yapabilir, "
+            "müziği ve sesi kontrol edebilirim. Saati, hava durumunu, döviz kurlarını "
+            "ve günün haberlerini söyler, ajandanıza hatırlatıcı eklerim. Bilgisayarınızda "
+            "dosya bulup düzenleyebilir, YouTube videolarını özetleyebilir, sorularınızı "
+            "yanıtlayabilir ve Python gibi konularda yardımcı olabilirim efendim.")
+
+
+_AJANDA_SORU_KALIPLARI = (" ajandamda ne var", " ajandam ne", " ajandami oku", " ajandada ne var",
+                          " bugun planim", " bugunku planim", " programim ne", " bugun ne isim var",
+                          " ajandamda neler var", " ajandami soyle")
+
+
+def _ajanda_oku(t: str):
+    if not any(k in t for k in _AJANDA_SORU_KALIPLARI):
+        return None
+    try:
+        from jarvis import ajanda
+    except ImportError:
+        import ajanda
+    return ajanda.ozet_metin()
+
+
 def _kendini_tanit(t: str):
     if not any(k in t for k in _TANIT_KALIPLARI):
         return None
@@ -621,7 +654,7 @@ def _youtube_ozet(ham_metin: str):
 
 
 # Sirayla denenecek isleyiciler (normalize edilmis metinle calisanlar)
-_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
+_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _yetenekler, _ajanda_oku, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
                 _internette_ara, _dosya_bul, _dosya_duzenle, _ses_medya, _pencere, _sistem)
 
 

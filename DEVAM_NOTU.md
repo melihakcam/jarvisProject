@@ -103,20 +103,27 @@
 - Hepsi kaldırıldı (paketler, model, kod). Ses yine Windows Tolga.
 - Not: Panel İngilizce moddayken seçilen Edge İngilizce sesi kullanıcıya çok iyi geliyor. Türkçe için de çok dilli bir Edge sesi denenebilir; önce panelde seçilen sesin adı günlüğe yazdırılıp öğrenilmeli.
 
+- **Sunum hazırlığı:**
+  - "Sen kimsin", "kendini tanıt", "ne yapabilirsin", "hey Jarvis" ve "YouTube'u aç" Claude'a gitmeden, anında ve sabit cevapla çalışıyor.
+  - "Ne yapabilirsin" cevabı JARVIS'in bütün yeteneklerini sayıyor. Sohbet yolundaki Claude da kısıtlamalarından bahsetmiyor.
+- **Ajanda:**
+  - "… ajandama ekle / yaz / kaydet" cümleleri de hatırlatıcı kuruyor. "Ajandamda ne var" sorusu bugünkü kayıtları okuyor.
+  - Masaüstü uygulaması artık hatırlatıcı bekçisini başlatıyor; saati gelen hatırlatıcı sesli okunuyor. Bu, uygulama çalışırken henüz denenmedi.
+- **Edge gecikmesi:** Tuş bırakıldıktan sonra Edge 1,5 sn içinde sonucu vermezse panel ekrandaki metni kendisi gönderiyor. Hiçbir şey duyulmazsa "Sizi duyamadım" yazıyor.
+
 ## Bilinen sorunlar
 
-- **Hatırlatıcılar masaüstü uygulamasında çalmıyor.** `desktop.py` sunucuyu kendisi başlatıyor ama `server._hatirlatici_dongusu` başlatılmıyor. Ayrıca `server._onisitma` (Whisper ön yükleme) da çağrılmıyor.
+- **Whisper ön yüklemesi masaüstü uygulamasında yapılmıyor.** `server._onisitma` çağrılmıyor; Whisper ilk kullanıldığında yükleniyor.
 - **İngilizce modda Edge ses tanıması bazen hiç sonuç vermiyor.** Bu durumda panel hiçbir tepki göstermiyor. Önerilen çözüm: İngilizce modda dinlemeyi Whisper'a vermek ve boş sonuçta "duyamadım" yazmak. Kullanıcı şimdilik istemedi.
 
 ## Yeni öncelik sırası
 
-1. **Hatırlatıcı hatası** (yukarıda). Küçük bir iş.
-2. **Sabah brifingi ve günlük akış** (madde 4 ve 6). Kur, hava ve haber parçaları artık hazır; 07:00 ve 19:00'da otomatik okunabilir.
-3. **Konuşmaya erken başlama.** Cevap akış (stream) olarak alınır, ilk cümle hazır olunca okunur.
-4. **Akıllı hafıza** (madde 3). Claude'a yalnızca soruyla ilgili notlar gider.
-5. **Panelde brifing görselleri** (madde 5).
-6. **Ertelenenler:** Gemini yedek beyin, doğal ses, Ollama yönlendirici, skill yapısı (token artırıyor), telefondan erişim, YouTube maç özeti, sürekli dinleyen "Hey Jarvis" (şu an bas-konuş ile çalışıyor).
+1. **Sabah brifingi ve günlük akış** (madde 4 ve 6). Kur, hava ve haber parçaları artık hazır; 07:00 ve 19:00'da otomatik okunabilir.
+2. **Konuşmaya erken başlama.** Cevap akış (stream) olarak alınır, ilk cümle hazır olunca okunur.
+3. **Akıllı hafıza** (madde 3). Claude'a yalnızca soruyla ilgili notlar gider.
+4. **Panelde brifing görselleri** (madde 5).
+5. **Ertelenenler:** Gemini yedek beyin, doğal ses, Ollama yönlendirici, skill yapısı (token artırıyor), telefondan erişim, YouTube maç özeti, sürekli dinleyen "Hey Jarvis" (şu an bas-konuş ile çalışıyor).
 
 ## Sıradaki adım
 
-Kullanıcı 19 Ekim'de JARVIS'i bir sunumda kullanacak. Sunum öncesinde kullanılacak cümleler denenmeli; internet bağlantısı gerekli. Sunumdan sonra öncelik sırasının birinci maddesiyle (hatırlatıcı hatası) devam edilecek.
+Kullanıcı 19 Ekim'de JARVIS'i bir sunumda kullanacak. Sunum öncesinde kullanılacak cümleler denenmeli; internet bağlantısı gerekli. Sunumdan sonra önce hatırlatıcının gerçekten çaldığı doğrulanacak ("2 dakika sonra test hatırlat"). Ardından öncelik sırasının birinci maddesiyle (sabah brifingi) devam edilecek.

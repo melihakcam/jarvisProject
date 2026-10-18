@@ -838,6 +838,7 @@
       var metin = (sonMetin || "").trim();
       sonMetin = ""; birikmis = "";
       if (metin) _metniGonder(metin);
+      else $("transcript").textContent = "Sizi duyamadım efendim, tekrar söyler misiniz?";
     };
     return r;
   }
@@ -884,7 +885,20 @@
     if (!webSpeechVar) { backendBitir(); return; }
     if (!tanimaAktif && !basiliTutuluyor) return;
     basiliTutuluyor = false;               // artik onend metni gonderecek
+    if (sonMetin) $("transcript").textContent = "İşleniyor…";
     try { if (tanima) tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
+    // Edge son sonucu bazen cok gec teslim ediyor (onend gecikiyor). 1,5 sn
+    // icinde bitmezse beklemeyi kes, ekranda gorunen metni hemen gonder.
+    var bekleyen = tanima;
+    setTimeout(function () {
+      if (tanima !== bekleyen || !tanimaAktif || basiliTutuluyor) return;
+      var metin = (sonMetin || "").trim();
+      sonMetin = ""; birikmis = ""; tanimaAktif = false;
+      state.listening = false; updateCore();
+      try { bekleyen.onend = null; bekleyen.abort(); } catch (e) {}   // cift gonderim olmasin
+      if (metin) _metniGonder(metin);
+      else $("transcript").textContent = "Sizi duyamadım efendim, tekrar söyler misiniz?";
+    }, 1500);
   }
 
   function backendBaslat() {

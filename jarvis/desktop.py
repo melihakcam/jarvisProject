@@ -131,22 +131,20 @@ _PROFIL_AD = "tarayici_profil"   # user-data-dir icin benzersiz iz (surec takibi
 
 
 def _profil_pidleri() -> list:
-    """Bizim profilimizle acilmis tarayici (Edge/Chrome) sureclerinin PID listesi."""
+    """Bizim profilimizle acilmis tarayici (Edge/Chrome) sureclerinin PID listesi.
+
+    psutil ile bakilir: wmic yeni Windows 11 surumlerinde kaldirildi; onunla
+    pencere hic bulunamiyor, pencere kapaninca uygulama da kapanmiyordu.
+    """
+    import psutil
     pidler = []
-    for isim in ("msedge.exe", "chrome.exe"):
+    for p in psutil.process_iter(["name", "cmdline"]):
         try:
-            out = subprocess.run(
-                ["wmic", "process", "where", f"name='{isim}'",
-                 "get", "commandline,processid"],
-                capture_output=True, text=True, creationflags=_NO_WINDOW
-            ).stdout or ""
-        except Exception:
-            out = ""
-        for satir in out.splitlines():
-            if _PROFIL_AD in satir:
-                parcalar = satir.split()
-                if parcalar and parcalar[-1].isdigit():
-                    pidler.append(parcalar[-1])
+            if (p.info["name"] or "").lower() in ("msedge.exe", "chrome.exe") and \
+                    _PROFIL_AD in " ".join(p.info["cmdline"] or []):
+                pidler.append(str(p.pid))
+        except (psutil.Error, TypeError):
+            continue
     return pidler
 
 

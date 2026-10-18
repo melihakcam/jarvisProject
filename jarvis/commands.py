@@ -49,6 +49,7 @@ UYGULAMALAR = {
     ("komut istemi", "cmd", "terminal"): ("cmd", "cmd.exe"),
     ("ayarlar", "settings"): ("ms-settings:", ""),
     ("word", "microsoft word"): ("winword", "WINWORD.EXE"),
+    ("powerpoint", "power point", "powerpointi", "power pointi"): ("powerpnt", "POWERPNT.EXE"),
     ("excel", "microsoft excel"): ("excel", "EXCEL.EXE"),
     ("spotify",): ("spotify", "Spotify.exe"),
     ("gorev yoneticisi", "task manager"): ("taskmgr", "Taskmgr.exe"),
@@ -131,10 +132,15 @@ def _baslat(hedef: str) -> None:
     subprocess.Popen(f'start "" "{hedef}"', shell=True, creationflags=_GIZLI)
 
 
+# Office uygulamalari zorla kapatilmaz: kaydedilmemis calisma kaybolmasin,
+# Office "kaydetmek ister misiniz" diye sorsun.
+_NAZIK_KAPAT = ("WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE")
+
+
 def _kapat(imaj: str) -> bool:
     """Verilen exe imajini kapatir. Basarili ise True."""
-    sonuc = subprocess.run(["taskkill", "/IM", imaj, "/F"],
-                           capture_output=True, text=True, creationflags=_GIZLI)
+    komut = ["taskkill", "/IM", imaj] + ([] if imaj in _NAZIK_KAPAT else ["/F"])
+    sonuc = subprocess.run(komut, capture_output=True, text=True, creationflags=_GIZLI)
     return sonuc.returncode == 0
 
 
@@ -153,6 +159,43 @@ def _saat_tarih(t: str):
         return (f"Bugun {bugun.day} {aylar[bugun.month-1]} {bugun.year}, "
                 f"{gunler[bugun.weekday()]} efendim.")
     return None
+
+
+# "Kendini kapat": JARVIS'in penceresini ve sunucusunu kapatir. Cevap sesli
+# okunabilsin diye birkac saniye sonra kapanir. "Jarvis YouTube'u kapat" gibi
+# komutlar buraya takilmaz: sadece asagidaki kaliplar ya da "jarvis kapan/kapat".
+_KAPAN_KALIPLARI = (" kendini kapat", " kendini kapa ", " jarvisi kapat", " shut yourself down",
+                    " shut down jarvis", " close jarvis", " close yourself")
+_KAPANMA_GECIKMESI = 4   # saniye
+
+
+def _jarvisi_kapat():
+    """JARVIS uygulama penceresini (tarayici profili) ve bu sureci kapatir."""
+    try:
+        import psutil
+        for p in psutil.process_iter(["name", "cmdline"]):
+            try:
+                if (p.info["name"] or "").lower() in ("msedge.exe", "chrome.exe") and \
+                        "tarayici_profil" in " ".join(p.info["cmdline"] or []):
+                    p.kill()
+            except (psutil.Error, TypeError):
+                continue
+    except Exception as e:
+        print("[kapat] pencere kapatilamadi:", e)
+    os._exit(0)
+
+
+def _kendini_kapat(t: str):
+    w = _kelimeler(t)
+    sadece_ad_kapat = (len(w) == 2 and w[0] in _JARVIS_YAZIMLARI
+                       and w[1] in ("kapat", "kapan", "kapa"))
+    if not sadece_ad_kapat and not any(k in t for k in _KAPAN_KALIPLARI):
+        return None
+    import threading
+    threading.Timer(_KAPANMA_GECIKMESI, _jarvisi_kapat).start()
+    if any(k in t for k in (" shut", " close")):
+        return "Goodbye, sir."
+    return "Görüşmek üzere efendim."
 
 
 # Sadece "Jarvis" / "Hey Jarvis" denirse (ses tanima adi farkli yazabiliyor)
@@ -673,7 +716,7 @@ def _youtube_ozet(ham_metin: str):
 
 
 # Sirayla denenecek isleyiciler (normalize edilmis metinle calisanlar)
-_ISLEYICILER = (_seslenme, _saat_tarih, _dil_degistir, _kendini_tanit, _yetenekler, _ajanda_oku, _tesekkur, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
+_ISLEYICILER = (_seslenme, _kendini_kapat, _saat_tarih, _dil_degistir, _kendini_tanit, _yetenekler, _ajanda_oku, _tesekkur, _doviz_kuru, _hava_durumu, _haberler, _ag_durumu, _uygulama_ac, _uygulama_kapat,
                 _internette_ara, _dosya_bul, _dosya_duzenle, _ses_medya, _pencere, _sistem)
 
 

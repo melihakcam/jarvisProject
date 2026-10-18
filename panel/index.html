@@ -742,6 +742,7 @@
     if (!blob.size) { $("transcript").textContent = "Sizi duyamadım efendim."; return; }
     var fd = new FormData();
     fd.append("audio", blob, "ses.webm");
+    fd.append("lang", dil);   // Whisper dil algilamakla vakit kaybetmesin
     fetch("/transcribe", { method: "POST", body: fd })
       .then(function (r) { return r.json(); })
       .then(function (d) {
@@ -815,12 +816,19 @@
       for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
       // birikmis: onceki oturumlardan (arada kesildiyse) gelen metin
       sonMetin = (birikmis + " " + t).trim();
+      sonFinal = e.results.length > 0 && e.results[e.results.length - 1].isFinal;
       if (t) webSpeechHata = 0;     // calisiyor -> hata sayacini sifirla
+      if (!basiliTutuluyor) {       // tus birakildi: cumle bittiyse hemen gonder
+        if (sonFinal) _tanimaBitti();
+        return;
+      }
       $("transcript").textContent = sonMetin ? ("… " + sonMetin) : "Dinliyorum…";
     };
     r.onerror = function (e) {
       var hata = e && e.error;
       if (hata === "not-allowed" || hata === "service-not-allowed") {
+        tanimaBittiMi = true;
+        if (yedekKayit) { try { yedekKayit.stop(); } catch (e2) {} yedekKayit = null; }
         basiliTutuluyor = false; tanimaAktif = false; state.listening = false; updateCore();
         var m = "Mikrofona erişemedim efendim, lütfen izin verin.";
         $("transcript").textContent = m; pushLog("mikrofon izni yok.", "#ffb35c"); speak(m);
@@ -830,16 +838,14 @@
         // Gecici ag/servis hatasi olabilir: tek hatada daha zayif Whisper'a
         // kalici gecme; ust uste 3 hatada (ornegin WebView2'de servis yok) gec.
         webSpeechHata++;
-        basiliTutuluyor = false; tanimaAktif = false;
-        state.listening = false; updateCore();
+        basiliTutuluyor = false;
         if (webSpeechHata >= 3) {
           webSpeechVar = false;
           pushLog("tarayıcı ses tanıma çalışmıyor, yedek motora geçildi.", "#ffb35c");
-          $("transcript").textContent = "Ses motoru değişti efendim, tekrar deneyin.";
         } else {
-          pushLog("tarayıcı ses tanıma hatası (" + hata + "), tekrar denenecek.", "#ffb35c");
-          $("transcript").textContent = "Anlayamadım efendim, tekrar söyler misiniz?";
+          pushLog("tarayıcı ses tanıma hatası (" + hata + "), yedek motor deneniyor.", "#ffb35c");
         }
+        _tanimaBitti();   // ekranda metin yoksa yedek kayit Whisper'a gider
       }
     };
     r.onend = function () {
@@ -850,13 +856,70 @@
         try { tanima = _tanimaKur(); tanimaAktif = true; tanima.start(); return; }
         catch (e) { /* devam edemedik -> asagida gonder */ }
       }
-      tanimaAktif = false; state.listening = false; updateCore();
-      var metin = (sonMetin || "").trim();
-      sonMetin = ""; birikmis = "";
-      if (metin) _metniGonder(metin);
-      else $("transcript").textContent = "Sizi duyamadım efendim, tekrar söyler misiniz?";
+      _tanimaBitti();
     };
     return r;
+  }
+
+  // ---- YEDEK KAYIT: Edge "Jarvis" adini tanimiyor (tek basina soyleyince bos,
+  // "Hey Jarvis" deyince sadece "Hey" yaziyor). Edge dinlerken ses ayrica
+  // kaydedilir; Edge bos ya da sadece hitap dondururse kayit Whisper'a gider
+  // (Whisper'a JARVIS adi ipucu olarak verildi, adi taniyor).
+  var sonFinal = false, tanimaBittiMi = true, yedekKayit = null, yedekParcalar = [];
+  var oturumNo = 0;   // her bas-konus bir oturum; eski zamanlayicilar yenisini bitirmesin
+  var basmaZamani = 0;
+
+  function _yedekKayitBaslat() {
+    yedekKayit = null; yedekParcalar = [];
+    if (!window.MediaRecorder) return;
+    ensureStream().then(function (s) {
+      if (tanimaBittiMi) return;           // kayit acilmadan konusma bitti
+      var rec;
+      try { rec = new MediaRecorder(s, _kayitSecenek()); } catch (e) { rec = new MediaRecorder(s); }
+      rec.ondataavailable = function (e) { if (e.data && e.data.size > 0) yedekParcalar.push(e.data); };
+      rec.start();
+      yedekKayit = rec;
+    }).catch(function () {});
+  }
+
+  // Sadece hitap mi? ("", "Hey", "Selam." -> Edge adi duyamamis demektir)
+  function _sadeceHitap(metin) {
+    return /^\s*(hey|hay|hi|ey|selam|merhaba)?[\s.,!?]*$/i.test(metin || "");
+  }
+
+  // Edge'in sonucu kesinlesti (ya da beklemekten vazgecildi): bir kez calisir.
+  function _tanimaBitti() {
+    if (tanimaBittiMi) return;
+    tanimaBittiMi = true;
+    var bitenTanima = tanima;
+    tanimaAktif = false; state.listening = false; updateCore();
+    try { bitenTanima.onend = null; bitenTanima.abort(); } catch (e) {}
+    var metin = (sonMetin || "").trim();
+    sonMetin = ""; birikmis = "";
+    var rec = yedekKayit;
+    yedekKayit = null;
+
+    // Edge "Jarvis"i yazamiyor: "Hey Jarvis" -> "Hey", tek basina "Jarvis" -> bos.
+    // Bunlar Whisper'a (bu bilgisayarda ~4 sn) gonderilmeden aninda "Jarvis"
+    // hitabi sayilir. Sadece uzun bir konusma tamamen kaybolduysa Whisper'a gidilir.
+    var kisaBasis = (Date.now() - basmaZamani) < 2500;
+    var gonderilecek = null;
+    if (metin && !_sadeceHitap(metin)) gonderilecek = metin;          // Edge anladi
+    else if (metin) gonderilecek = "Hey Jarvis";                       // sadece "Hey"
+    else if (kisaBasis) gonderilecek = "Jarvis";                       // bos, kisa basis
+    if (gonderilecek) {
+      if (rec && rec.state !== "inactive") { rec.onstop = null; try { rec.stop(); } catch (e) {} }
+      _metniGonder(gonderilecek);
+      return;
+    }
+    if (rec && rec.state !== "inactive") {  // uzun konusma kayboldu -> kayit Whisper'a
+      $("transcript").textContent = "İşleniyor…";
+      rec.onstop = function () { audioChunks = yedekParcalar; _kaydiGonder(); };
+      try { rec.stop(); } catch (e) { if (metin) _metniGonder(metin); }
+      return;
+    }
+    if (metin) _metniGonder(metin);           // kayit yok: "Hey" de olsa gonder
+    else $("transcript").textContent = "Sizi duyamadım efendim, tekrar söyler misiniz?";
   }
 
   // Bas ve sustur: tusa basilinca JARVIS hemen susar. Konusuyorduysa hoparlordeki
@@ -879,14 +942,17 @@
     if (!webSpeechVar) { backendBaslat(); return; }
     if (tanimaAktif) return;
     try {
-      sonMetin = ""; birikmis = ""; basiliTutuluyor = true;
+      sonMetin = ""; birikmis = ""; sonFinal = false; basiliTutuluyor = true;
+      tanimaBittiMi = false; oturumNo++; basmaZamani = Date.now();
       tanima = _tanimaKur();
       tanimaAktif = true;
       state.listening = true;
       $("transcript").textContent = "Dinliyorum…";
       updateCore();
       tanima.start();
+      _yedekKayitBaslat();
     } catch (e) {
+      tanimaBittiMi = true;
       tanimaAktif = false; basiliTutuluyor = false; webSpeechVar = false; backendBaslat();
     }
   }
@@ -900,33 +966,15 @@
     }
     if (!webSpeechVar) { backendBitir(); return; }
     if (!tanimaAktif && !basiliTutuluyor) return;
-    basiliTutuluyor = false;               // artik onend metni gonderecek
-    var bekleyen = tanima;
-    // Ekranda metin varsa Edge'in "bitti" sonucunu bekleme: son kelime de
-    // yazilsin diye 0,25 sn sonra ekrandaki metni hemen gonder (anlik cevap).
-    if (sonMetin) {
-      $("transcript").textContent = "İşleniyor…";
-      setTimeout(function () {
-        if (tanima !== bekleyen || !tanimaAktif || basiliTutuluyor) return;
-        var metin = (sonMetin || "").trim();
-        sonMetin = ""; birikmis = ""; tanimaAktif = false;
-        state.listening = false; updateCore();
-        try { bekleyen.onend = null; bekleyen.abort(); } catch (e) {}   // cift gonderim olmasin
-        if (metin) _metniGonder(metin);
-      }, 250);
-      return;
-    }
-    try { if (tanima) tanima.stop(); } catch (e) {}   // -> onend -> _metniGonder
-    // Henuz metin yoksa Edge'in sonucunu en fazla 1,5 sn bekle.
-    setTimeout(function () {
-      if (tanima !== bekleyen || !tanimaAktif || basiliTutuluyor) return;
-      var metin = (sonMetin || "").trim();
-      sonMetin = ""; birikmis = ""; tanimaAktif = false;
-      state.listening = false; updateCore();
-      try { bekleyen.onend = null; bekleyen.abort(); } catch (e) {}   // cift gonderim olmasin
-      if (metin) _metniGonder(metin);
-      else $("transcript").textContent = "Sizi duyamadım efendim, tekrar söyler misiniz?";
-    }, 1500);
+    basiliTutuluyor = false;               // artik sonuc gelince gonderilecek
+    if (sonMetin) $("transcript").textContent = "İşleniyor…";
+    // Cumle zaten kesinlestiyse bekleme, hemen gonder
+    if (sonMetin && sonFinal) { _tanimaBitti(); return; }
+    // Degilse Edge'den son kelimeyi iste (stop -> son sonuc + onend); en fazla
+    // 1 sn bekle, gelmezse ekrandaki metinle (ya da yedek kayitla) devam et.
+    try { if (tanima) tanima.stop(); } catch (e) {}
+    var no = oturumNo;
+    setTimeout(function () { if (no === oturumNo) _tanimaBitti(); }, 1000);
   }
 
   function backendBaslat() {

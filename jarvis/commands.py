@@ -207,6 +207,9 @@ _SESLENME_EKLERI = ("hey", "hay", "hi", "hello", "ey", "hop", "selam", "merhaba"
 
 def _seslenme(t: str):
     w = _kelimeler(t)
+    # Tek basina "Hey" da sayilir: ses tanima "Hey Jarvis"in sadece "Hey"ini yaziyor
+    if w in (["hey"], ["hay"], ["hey", "hey"]):
+        return "Emirlerinizi bekliyorum efendim."
     if not w or not any(k in _JARVIS_YAZIMLARI for k in w):
         return None
     if not all(k in _JARVIS_YAZIMLARI or k in _SESLENME_EKLERI for k in w):

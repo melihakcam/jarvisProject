@@ -192,7 +192,8 @@ def transcribe():
     tmp = os.path.join(tempfile.gettempdir(), "jarvis_ses.webm")
     try:
         f.save(tmp)
-        heard = stt.dosyadan_coz(_model_al(), tmp)
+        dil = "en" if request.form.get("lang") == "en" else "tr"
+        heard = stt.dosyadan_coz(_model_al(), tmp, dil)
         print(f"[STT] duyulan: {heard!r}")
     except Exception as e:
         print("transcribe hata:", e)

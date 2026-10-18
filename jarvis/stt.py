@@ -170,26 +170,17 @@ def sesi_yukselt(ses, np=None):
     return ses
 
 
-def _dil_ayari(model, ses16) -> dict:
-    """Konusmanin Turkce mi Ingilizce mi oldugunu secip Whisper ayarini dondurur.
-
-    Whisper'in serbest dil algilamasi kisa Turkce cumleleri baska dillere
-    (Azerice vb.) kaydirabilir; bu yuzden sadece tr ile en karsilastirilir ve
-    esitlikte Turkce secilir.
-    """
-    try:
-        _, _, olasiliklar = model.detect_language(ses16)
-        p = dict(olasiliklar)
-        if p.get("en", 0.0) > p.get("tr", 0.0):
-            return dict(_WHISPER_AYAR, language="en", initial_prompt=_EN_IPUCU)
-    except Exception as e:
-        print("[STT] dil algilanamadi, Turkce varsayildi:", e)
+def _dil_ayari(dil: str) -> dict:
+    """Panelin secili diline gore Whisper ayari. Otomatik dil algilama
+    kullanilmaz: CPU'da cozme suresini ~2 sn'den ~8 sn'ye cikariyordu."""
+    if dil == "en":
+        return dict(_WHISPER_AYAR, language="en", initial_prompt=_EN_IPUCU)
     return _WHISPER_AYAR
 
 
-def whisper_coz(model, ses16, np=None):
+def whisper_coz(model, ses16, np=None, dil: str = "tr"):
     """16 kHz float ses dizisini Whisper ile metne cevirir (Turkce ya da Ingilizce)."""
-    segmentler, _ = model.transcribe(ses16, **_dil_ayari(model, ses16))
+    segmentler, _ = model.transcribe(ses16, **_dil_ayari(dil))
     return " ".join(s.text for s in segmentler).strip()
 
 
@@ -200,8 +191,8 @@ def whisper_model_yukle():
                         compute_type=config.WHISPER_COMPUTE)
 
 
-def dosyadan_coz(model, dosya_yolu: str) -> str:
-    """Ses dosyasini (webm/wav/ogg...) Whisper ile Turkce metne cevirir.
+def dosyadan_coz(model, dosya_yolu: str, dil: str = "tr") -> str:
+    """Ses dosyasini (webm/wav/ogg...) Whisper ile metne cevirir (dil: "tr"/"en").
 
     Tarayicidan gelen ses genelde kisik ve sikistirilmis olur; onu 16 kHz'e cozup
     tepe seviyeye yukseltiyoruz. Bu, model boyutunu buyutmeden dogrulugu artirir.
@@ -214,10 +205,10 @@ def dosyadan_coz(model, dosya_yolu: str) -> str:
         if ses16 is None or np.asarray(ses16).size < 4000:   # ~0.25 sn'den kisa
             return ""
         ses16 = sesi_yukselt(ses16, np)
-        return whisper_coz(model, ses16, np)
+        return whisper_coz(model, ses16, np, dil)
     except Exception as e:
         print("[STT] on-isleme atlandi, dogrudan cozuluyor:", e)
-        segmentler, _ = model.transcribe(dosya_yolu, **_WHISPER_AYAR)
+        segmentler, _ = model.transcribe(dosya_yolu, **_dil_ayari(dil))
         return " ".join(s.text for s in segmentler).strip()
 
 

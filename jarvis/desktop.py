@@ -29,11 +29,11 @@ import time
 import urllib.request
 
 try:
-    from jarvis import config, brain
-    from jarvis.server import app, _hatirlatici_dongusu
+    from jarvis import config
+    from jarvis.server import app, _hatirlatici_dongusu, _onisitma
 except ImportError:
-    import config, brain
-    from server import app, _hatirlatici_dongusu
+    import config
+    from server import app, _hatirlatici_dongusu, _onisitma
 
 _HOST = "127.0.0.1"
 _PORT = 5000
@@ -98,8 +98,9 @@ def _sunucuyu_baslat() -> None:
         except Exception as e:
             print("Sunucu baslatilamadi:", e)
     threading.Thread(target=_calis, daemon=True).start()
-    # Ilk sohbet sorusu icin Claude hazir beklesin
-    threading.Thread(target=brain.onceden_hazirla, daemon=True).start()
+    # Ilk sohbet sorusu icin Claude hazir beklesin ve Whisper onceden yuklensin
+    # (Edge adi anlamayinca yedek kayit Whisper'a gider; ilk seferde beklemesin)
+    threading.Thread(target=_onisitma, daemon=True).start()
     # Saati gelen hatirlaticiyi sesli soyleyen bekci (server.main() bunu
     # baslatiyordu; masaustu uygulamasi sunucuyu kendisi actigi icin burada)
     threading.Thread(target=_hatirlatici_dongusu, daemon=True).start()

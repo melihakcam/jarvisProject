@@ -111,9 +111,26 @@
   - Masaüstü uygulaması artık hatırlatıcı bekçisini başlatıyor; saati gelen hatırlatıcı sesli okunuyor. Bu, uygulama çalışırken henüz denenmedi.
 - **Edge gecikmesi:** Tuş bırakıldıktan sonra Edge 1,5 sn içinde sonucu vermezse panel ekrandaki metni kendisi gönderiyor. Hiçbir şey duyulmazsa "Sizi duyamadım" yazıyor.
 
+## 18 Ekim 2026 — aynı oturumun devamı (commit 86887ed, 22fe18d, ffd47ae, 68bc20e)
+
+- **Ses tonu düzeldi** (`panel/index.html` `_parcala`): Metin her noktada değil, yalnızca gerçek cümle sonlarında ve yaklaşık 300 karakterlik parçalarla bölünüyor. Takılma ve ton dalgalanması azaldı.
+- **Anlık cevap:**
+  - Tuş bırakıldığında cümle tamamlanmışsa hemen gönderiliyor; tamamlanmamışsa en fazla 1 sn bekleniyor. Yarım giden cümle ("bilgisay") sorunu düzeldi.
+  - Yeni hızlı komutlar: teşekkür, ajandayı okuma, ekranı kilitleme ("kilitle" yanlış yazılsa da).
+  - "Evet", "tamam" gibi onaylar önceki konuşma varsa işlem yoluna gidiyor.
+- **PowerPoint aç/kapat:** Word, Excel ve PowerPoint zorla değil, nazikçe kapatılıyor (kaydetme sorusu çıkabilir).
+- **"Kendini kapat" / "Jarvis kapan":** JARVIS vedalaşıp 4 sn sonra paneliyle birlikte kapanıyor.
+- **Pencere takibi düzeltildi:** Bu Windows sürümünde `wmic` yok. Süreç takibi artık `psutil` ile yapılıyor; pencere kapanınca uygulama da kapanıyor.
+- **"Jarvis" adı tanınıyor:** Edge'in Türkçe tanıması "Jarvis" kelimesini bilmiyor.
+  - "Hey Jarvis" → Edge yalnızca "Hey" yazar → selamlama cevabı.
+  - Tek başına "Jarvis" → Edge boş döner. Kısa basışta (2,5 sn altı) selamlama cevabı verilir.
+  - Uzun ve hiç anlaşılmayan konuşma yedek kayıttan Whisper'a gider (yaklaşık 4 sn).
+  - Yan etki: Kısa basıp anlaşılmayan bir şey söylenirse de selamlama cevabı gelir.
+- **Whisper hızlandı:** Otomatik dil algılama kaldırıldı (8 sn'den 4 sn'ye indi); panel dili (`lang`) gönderiyor. Masaüstü uygulaması açılışta Whisper'ı yüklüyor ve Claude'u hazırlıyor (`server._onisitma`).
+- **Kullanıcı testi:** Kullanıcı yeniden açıp denedi: "Şu an çok iyi çalışıyor."
+
 ## Bilinen sorunlar
 
-- **Whisper ön yüklemesi masaüstü uygulamasında yapılmıyor.** `server._onisitma` çağrılmıyor; Whisper ilk kullanıldığında yükleniyor.
 - **İngilizce modda Edge ses tanıması bazen hiç sonuç vermiyor.** Bu durumda panel hiçbir tepki göstermiyor. Önerilen çözüm: İngilizce modda dinlemeyi Whisper'a vermek ve boş sonuçta "duyamadım" yazmak. Kullanıcı şimdilik istemedi.
 
 ## Yeni öncelik sırası
